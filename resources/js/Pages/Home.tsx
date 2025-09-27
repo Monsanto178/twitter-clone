@@ -1,8 +1,9 @@
-import { Post, SideMenu} from "../Components";
+import { Post, SideMenu, CommentBox} from "../Components";
 import content from '../../assets/content.jpg';
 import cover from '../../assets/cover.jpg';
 import example_video from '../../assets/video_example.mp4';
-// import { ReactNode } from "react";
+import img_example_1 from '../../assets/img_example_1.jpg';
+// import img_example_2 from '../../assets/img_example_2.jpg';
 
 type Media = {
     data: string | null;
@@ -16,11 +17,26 @@ const contenido2 = {
     data:content,
     mimeType: 'image/jpg'
 }
+const contenido3 = {
+    data: img_example_1,
+    mimeType: 'image/jpg'
+}
+// const contenido4 = {
+//     data:img_example_2,
+//     mimeType: 'image/jpg'
+// }
 
-type Poste = {
+type User = {
     cover_img: string;
     user_name: string;
     user_alias: string;
+    biography?: string;
+    following: number;
+    followers: number;
+    creation_date?: string;
+}
+
+type Poste = User & {
     time_posted: string;
     post_text: string | null;
     comments: number;
@@ -41,16 +57,25 @@ const Posteo: Poste = {
     user_alias:'@Joleas_12',
     user_name:'Jorge',
     cover_img:cover,
-    media:[contenido, contenido2, contenido, contenido2]
+    biography: 'Tecnólogo a tiempo completo. A veces no encuentro las llaves del auto.',
+    followers: 125,
+    following: 60,
+    creation_date: '9th september, 2009',
+    // media:[contenido, contenido2, contenido2]
+    media:[contenido3, contenido2, contenido]
+
 }
 
 
 export default function Home() {
     return (
         <>
-            <section className="bg-[#09122C] text-white h-full w-full flex justify-center px-80 py-20">
+            <section className="bg-[#09122C] text-white h-full w-full flex justify-center px-2 mx-auto py-20">
                 <SideMenu />
-                <Post post={Posteo}/>
+                <div className="flex flex-col min-w-[380px] max-w-[700px]">
+                    <CommentBox cover_img={Posteo.cover_img}/>
+                    <Post post={Posteo}/>
+                </div>
             </section>
         </>
         )

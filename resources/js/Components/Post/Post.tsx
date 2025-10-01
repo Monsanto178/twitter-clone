@@ -118,8 +118,8 @@ export const Post = ({post}:Props) => {
     }
 
     return(
-        <section className="relative flex cursor-pointer hover:bg-[#81818124] px-4 py-2 transition-all duration-300 ease-in-out text-[15px] md:text-[16px]">
-            <article className="relative h-[50px] pr-2" onMouseEnter={() => {setProfileHover(true)}} onMouseLeave={() => setProfileHover(false)}>
+        <article className="relative flex cursor-pointer hover:bg-[#81818124] px-4 py-2 transition-all duration-300 ease-in-out text-[15px] md:text-[16px]">
+            <div className="relative h-[50px] pr-2" onMouseEnter={() => {setProfileHover(true)}} onMouseLeave={() => setProfileHover(false)}>
                 <div className="relative w-[50px] h-[50px] rounded-[50%] overflow-hidden group">
                     <picture className="w-full h-full">
                         <img src={post.cover_img} alt="" className="w-full h-full" draggable={false}/>
@@ -132,9 +132,9 @@ export const Post = ({post}:Props) => {
                         <ProfileToolTip user={userData}/>
                     }
                 </div>
-            </article>
+            </div>
             
-            <article className="flex flex-col gap-y-2 w-[90%]">
+            <div className="flex flex-col gap-y-2 w-[90%]">
                 <div className="flex gap-x-4">
                     <a href="">
                         <strong>{post.user_name}</strong>
@@ -187,13 +187,13 @@ export const Post = ({post}:Props) => {
                         </div>
                     </div>
                 </div>
-            </article>
+            </div>
             
-            <article className={`transition-all duration-500 ease-in-out ${isModalOpen ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`transition-all duration-500 ease-in-out ${isModalOpen ? 'opacity-100' : 'opacity-0'}`}>
                 {post.media && isModalOpen &&  <MediaModal mediaData={post.media} current={curMediaFocus} setOpenModal={setIsModalOpen}/>}
-            </article>
+            </div>
 
-            <article className={`transition-all duration-500 ease-in-out ${isMCommentOpen ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`transition-all duration-500 ease-in-out ${isMCommentOpen ? 'opacity-100' : 'opacity-0'}`}>
                 {isMCommentOpen && 
                     <div onClick={() => {setIsMCommentOpen(false); document.body.style.overflow = 'auto';}} className="w-screen h-screen fixed inset-0 flex justify-center items-center">
                         <div className="fixed inset-0 bg-black opacity-85 w-screen h-screen"></div>
@@ -205,8 +205,8 @@ export const Post = ({post}:Props) => {
                         </div>
                     </div>
                 }
-            </article>
+            </div>
 
-        </section>
+        </article>
     )
 }

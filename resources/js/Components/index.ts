@@ -4,3 +4,5 @@ export * from './ProfileToolTip/ProfileToolTip';
 export * from './MediaModal/MediaModal';
 export * from './CommentBox/CommentBox';
 export * from './MediaModal/EditModal';
+export * from './Profile/ProfileCard';
+export * from './Notification/Notification';

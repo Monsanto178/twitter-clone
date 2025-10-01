@@ -1,4 +1,4 @@
-import { Post, SideMenu, CommentBox} from "../Components";
+import { Post, CommentBox} from "../Components";
 import content from '../../assets/content.jpg';
 import cover from '../../assets/cover.jpg';
 import example_video from '../../assets/video_example.mp4';
@@ -70,13 +70,8 @@ const Posteo: Poste = {
 export default function Home() {
     return (
         <>
-            <section className="bg-[#09122C] text-white h-full w-full flex justify-center px-2 mx-auto py-20">
-                <SideMenu />
-                <div className="flex flex-col min-w-[380px] max-w-[700px]">
-                    <CommentBox cover_img={Posteo.cover_img}/>
-                    <Post post={Posteo}/>
-                </div>
-            </section>
+            <CommentBox cover_img={Posteo.cover_img}/>
+            <Post post={Posteo}/>
         </>
         )
 }

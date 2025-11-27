@@ -1,140 +1,263 @@
-import { Post, ProfileCard } from "../Components";
-import content from '../../assets/content.jpg';
-import cover from '../../assets/cover.jpg';
-import example_video from '../../assets/video_example.mp4';
-import img_example_1 from '../../assets/img_example_1.jpg';
-import { useState } from "react";
-
-type Media = {
-    data: string | null;
-    mimeType: string;
-}
-
-const contenido = {
-    data:example_video,
-    mimeType: 'video/mp4'
-}
-const contenido2 = {
-    data:content,
-    mimeType: 'image/jpg'
-}
-const contenido3 = {
-    data: img_example_1,
-    mimeType: 'image/jpg'
-}
-
-type User = {
-    cover_img: string;
-    user_name: string;
-    user_alias: string;
-    biography?: string;
-    following: number;
-    followers: number;
-    creation_date?: string;
-    post_number: number;
-    profile_banner:string | null;
-    own_profile: boolean;
-}
-
-type Poste = User & {
-    time_posted: string;
-    post_text: string | null;
-    comments: number;
-    reposted: number;
-    likes: number;
-    media: Array<Media> | null
-}
-
-const Posteo: Poste = {
-    comments:12,
-    likes:15,
-    post_text:`La tecnología ha avanzado a pasos agigantados en las últimas décadas, transformando la manera en que vivimos, trabajamos y nos relacionamos. 
-        Desde la aparición de Internet hasta los desarrollos más recientes en inteligencia artificial, hemos sido testigos de una revolución que no solo ha cambiado la economía global, sino que también ha alterado profundamente nuestras experiencias cotidianas. 
-        Sin embargo, este progreso no está exento de desafíos y cuestionamientos, ya que surgen preguntas sobre cómo balancear la innovación con la ética, la privacidad y el impacto social. 
-        Es fundamental que, al avanzar, tengamos en cuenta no solo el potencial de la tecnología, sino también sus posibles repercusiones en el futuro de la humanidad.`,
-    reposted:3,
-    time_posted:'9 minutes ago',
-    user_alias:'@Joleas_12',
-    user_name:'Jorge',
-    cover_img:cover,
-    biography: 'Tecnólogo a tiempo completo. A veces no encuentro las llaves del auto.',
-    followers: 125,
-    following: 60,
-    creation_date: '9th september, 2009',
-    // media:[contenido, contenido2, contenido2]
-    media:[contenido3, contenido2, contenido],
-    post_number:34,
-    profile_banner:img_example_1,
-    own_profile:false
-}
-
-
-// type Post = User & {
-//     time_posted: string;
-//     post_text: string | null;
-//     comments: number;
-//     reposted: number;
-//     likes: number;
-//     media: Array<Media> | null
-// }
+import { Post, ProfileCard, Thread, Spinner, ProfileBackBar, ShowMoreBtn} from "../Components";
+import React, { useEffect, useState } from "react";
+import { PostType } from "../Types";
+import { fetchData } from "../Utils";
+import { useUserProfile } from '../Context/ProfileContext';
+import { useErrorContext } from "../Context/ErrorContext";
+// import bannerDefault from "../../assets/content.jpg";
 
 type Props = {
-    user: User;
+    profileId: string;
 }
-type Options = 'Post' | 'Answers' | 'Multimedia' | 'Likes';
+type PaginatedStats = {
+    current_page: number,
+    total: number,
+    last_page: number
+}
+type PaginatedPosts = {
+    posts: Array<PostType>,
+    stats: PaginatedStats
+}
 
-export default function Profile() {
-    const [currentOpt, setCurrentOpt] = useState<Options>('Post');
+type Options = 'Posts' | 'Replies' | 'Media' | 'Likes';
 
-    const usuario: User = {
-        user_alias:'@Joleas_12',
-        user_name:'Jorge',
-        cover_img:cover,
-        biography: 'Tecnólogo a tiempo completo. A veces no encuentro las llaves del auto.',
-        followers: 125,
-        following: 60,
-        creation_date: '9th september, 2009',
-        post_number:34,
-        profile_banner:img_example_1,
-        own_profile: false
+export default function Profile({profileId}:Props) {
+    const [currentOpt, setCurrentOpt] = useState<Options>('Posts');
+    const {fullProfile, loadProfile, followProfile, profileError, followError} = useUserProfile();
+
+    const [posts, setPosts] = useState<Array<PostType> | null>(null);
+    const [replies, setReplies] = useState<Array<PostType> | null>(null);
+    const [media, setMedia] = useState<Array<PostType> | null>(null);
+    const [likes, setLikes] = useState<Array<PostType> | null>(null);
+
+    const [paginated, setPaginated] = useState<PaginatedStats | null>(null);
+    const [pagReplies, setPagReplies] = useState<PaginatedStats | null>(null);
+    const [pagMedia, setPagMedia] = useState<PaginatedStats | null>(null);
+    const [pagLikes, setPagLikes] = useState<PaginatedStats | null>(null);
+
+    const [userLoading, setUserLoading] = useState(true);
+    const [postsLoading, setPostsLoading] = useState(true);
+    const [repliesLoading, setRepliesLoading] = useState(true);
+    const [mediaLoading, setMediaLoading] = useState(true);
+    const [likesLoading, setLikesLoading] = useState(true);
+    const [isFollowLoading, setIsFollowingLoading] = useState(false);
+
+    const [loadMorePosts, setLoadMorePosts] = useState(false);
+    const [loadMoreReplies, setLoadMoreReplies] = useState(false);
+    const [loadMoreMedia, setLoadMoreMedia] = useState(false);
+    const [loadMoreLikes, setLoadMoreLikes] = useState(false);
+
+    const {setErrorState} = useErrorContext();
+
+    const createFormData = (profileId:string, page:string | null = null) => {
+        const formData = new FormData();
+        formData.append('id', profileId);
+        if(page) {
+            formData.append('page', page);
+        }
+
+        return formData;
     }
+
+    async function fetchPosts(page:string | null = null) {
+        const formData = createFormData(profileId, page);
+
+        try {
+            if(posts) setLoadMorePosts(true);
+            const postsData = await fetchData<PaginatedPosts>('/profile/getPosts', "POST", formData);
+            
+            if(posts) {
+                const sumArray = posts.concat(postsData.posts);
+                setPosts(sumArray);
+                setPaginated(postsData.stats);
+
+                return;
+            }
+
+            setPosts(postsData.posts);
+            setPaginated(postsData.stats);
+            setPostsLoading(false);
+        } catch (e) {
+            console.error(e);
+            setErrorState('Oops... Cannot load posts right now. Please try again later');
+        } finally {
+            setLoadMorePosts(false);
+        }
+    }
+    async function fetchReplies(page:string | null = null) {
+        const formData = createFormData(profileId, page);
+
+        if(page) {
+            formData.append('page', page);
+        }
+        try {
+            if(replies) setLoadMoreReplies(true);
+            const repliesData = await fetchData<PaginatedPosts>('/profile/getReplies', "POST", formData);
+
+            if(replies) {
+                const sumArray = replies.concat(repliesData.posts);
+                setReplies(sumArray);
+                setPagReplies(repliesData.stats);
+
+                return;
+            }
+
+            setReplies(repliesData.posts);
+            setPagReplies(repliesData.stats);
+            setRepliesLoading(false);
+        } catch (e) {
+            console.error(e);
+            setErrorState('Oops... Cannot load posts right now. Please try again later');
+        } finally {
+            setLoadMoreReplies(false);
+        }
+    }
+    async function fetchMedia(page:string | null = null) {
+        const formData = createFormData(profileId, page);
+
+        try {
+            if(media) setLoadMoreMedia(true);
+            const mediaData = await fetchData<PaginatedPosts>('/profile/getMedia', "POST", formData);
+
+            if(media) {
+                const sumArray = media.concat(mediaData.posts);
+                setMedia(sumArray);
+                setPagMedia(mediaData.stats);
+
+                return;
+            }
+            
+            setMedia(mediaData.posts);
+            setPagMedia(mediaData.stats)
+            setMediaLoading(false);
+        } catch (e) {
+            console.error(e);
+            setErrorState('Oops... Cannot load posts right now. Please try again later');
+        } finally {
+            setLoadMoreMedia(false);
+        }
+    }
+    async function fetchLikes(page:string | null = null) {
+        const formData = createFormData(profileId, page);
+
+        try {
+            if(likes) setLoadMoreLikes(true);
+            const likesData = await fetchData<PaginatedPosts>('/profile/getLikes', "POST", formData);
+
+            if(likes) {
+                const sumArray = likes.concat(likesData.posts);
+                setLikes(sumArray);
+                setPagLikes(likesData.stats);
+
+                return;
+            }
+
+            setLikes(likesData.posts);
+            setPagLikes(likesData.stats)
+            setLikesLoading(false);
+        } catch (e) {
+            console.error(e);
+            setErrorState('Oops... Cannot load posts right now. Please try again later');
+        } finally {
+            setLoadMoreLikes(false);
+        }
+    }
+
+    const displayMessage = (message:string) => {
+        return (
+            <article className="flex justify-center items-center">
+                <div>
+                    {message}
+                </div>
+            </article>
+        )
+    }
+
+    const followBtn = async() => {
+        if(!fullProfile) return;
+        setIsFollowingLoading(true);
+        followProfile(fullProfile)
+        .finally(() => {
+            setIsFollowingLoading(false);
+            if(followError) setErrorState(followError);
+        });
+    }
+
+    useEffect(() => {
+        setUserLoading(true);
+        loadProfile(profileId).finally(() => {
+            setUserLoading(false);
+            if(profileError) setErrorState(profileError);
+        });
+    }, [])
+
+    useEffect(() => {
+        if(!fullProfile || posts) return;
+        fetchPosts();
+    }, [fullProfile, posts]);
+
+    useEffect(() => {
+        switch (currentOpt) {
+            case 'Posts':
+                if(posts) return;
+
+                fetchPosts();
+                break;
+            case 'Replies':
+                if(replies) return;
+
+                fetchReplies();
+                break;
+            case 'Media':
+                if(media) return;
+
+                fetchMedia();
+                break;
+            case 'Likes':
+                if(likes) return;
+
+                fetchLikes();
+                break;
+            default:
+                break;
+        }
+    },[currentOpt])
+
     return (
         <div className="px-4 py-2 gap-4 flex flex-col">
-            <section className="flex justify-between items-center">
-                <article className="flex flex-col">
-                    <strong className="text-[20px]">{usuario.user_name}</strong>
-                    <span className="text-[#ffffff7d]">{usuario.post_number} posts</span>
-                </article>
-                {usuario.own_profile && 
-                <article>
-                    <button className="flex w-20 h-12 items-center justify-center p-1 bg-[#BE3144] transition-all duration-300 hover:bg-[#872341] rounded-[20px] cursor-pointer">
-                        <strong>Follow</strong>
-                    </button>
-                </article>
-                }
-            </section>
-
-            <ProfileCard user={usuario}/>
+            {fullProfile && !userLoading && 
+            <>
+            
+            <ProfileBackBar fullProfile={fullProfile} isFollowLoading={isFollowLoading} paginated={paginated} followBtn={followBtn}/>
+            <ProfileCard user={fullProfile.profile}/>
 
             <section className="mx-0 sm:mx-4 relative">
                 <div className="flex justify-between text-[16px] sm:text-[18px]">
                     <button 
-                        onClick={() => {setCurrentOpt('Post')}} 
-                        className={`${currentOpt === 'Post' ? 'font-[400] scale-105' : 'hover:scale-110'} transition-scale duration-300 ease-in-out cursor-pointer w-[25%]  p-2`}>
-                            Post
+                        onClick={() => {
+                            setCurrentOpt('Posts');
+                        }} 
+                        className={`${currentOpt === 'Posts' ? 'font-[400] scale-105' : 'hover:scale-110'} transition-scale duration-300 ease-in-out cursor-pointer w-[25%]  p-2`}>
+                            Posts
                     </button>
                     <button 
-                        onClick={() => {setCurrentOpt('Answers')}} 
-                        className={`${currentOpt === 'Answers' ? 'font-[400] scale-105' : 'hover:scale-110'} transition-scale duration-300 ease-in-out cursor-pointer w-[25%]  p-2`}>
-                            Answers
+                        onClick={() => {
+                            setCurrentOpt('Replies');
+                        }} 
+                        className={`${currentOpt === 'Replies' ? 'font-[400] scale-105' : 'hover:scale-110'} transition-scale duration-300 ease-in-out cursor-pointer w-[25%]  p-2`}>
+                            Replies
                     </button>
                     <button 
-                        onClick={() => {setCurrentOpt('Multimedia')}} 
-                        className={`${currentOpt === 'Multimedia' ? 'font-[400] scale-105' : 'hover:scale-110'} transition-scale duration-300 ease-in-out cursor-pointer w-[25%]  p-2`}>
-                            Multimedia
+                        onClick={() => {
+                            setCurrentOpt('Media');
+                        }} 
+                        className={`${currentOpt === 'Media' ? 'font-[400] scale-105' : 'hover:scale-110'} transition-scale duration-300 ease-in-out cursor-pointer w-[25%]  p-2`}>
+                            Media
                     </button>
                     <button 
-                        onClick={() => {setCurrentOpt('Likes')}} 
+                        onClick={() => {
+                            setCurrentOpt('Likes');
+                        }} 
                         className={`${currentOpt === 'Likes' ? 'font-[400] scale-105' : 'hover:scale-110'} transition-scale duration-300 ease-in-out cursor-pointer w-[25%]  p-2`}>
                             Likes
                     </button>
@@ -142,16 +265,107 @@ export default function Profile() {
                 <div
                 className="absolute bottom-0 left-0 w-[25%] h-[4px] bg-blue-500 transition-all duration-300 ease-in-out"
                 style={{
-                    left: currentOpt === 'Post' ? '0%' :
-                            currentOpt === 'Answers' ? '25%' :
-                            currentOpt === 'Multimedia' ? '50%' : '75%',
+                    left: currentOpt === 'Posts' ? '0%' :
+                            currentOpt === 'Replies' ? '25%' :
+                            currentOpt === 'Media' ? '50%' : '75%',
                 }}
                 />
             </section>
 
             <section>
-                <Post post={Posteo}/>
+                {currentOpt === 'Posts' &&
+                <>
+                    {posts && !postsLoading && 
+                        posts.map((post, idx) => {
+                            return(
+                                <React.Fragment key={idx}>
+                                    <Post key={idx} post={post} selected={false}/>
+                                </React.Fragment>
+                            )
+                        })
+
+                    }
+                    {posts && !postsLoading && paginated?.current_page && paginated?.current_page !== paginated?.last_page && 
+                        <ShowMoreBtn fetchAction={fetchPosts} page={(paginated.current_page+1).toString()} loadFlag={loadMorePosts}/>
+                    }
+                    {!postsLoading && posts?.length === 0 &&
+                        displayMessage(`No posts found on this profile`)
+                    }
+                    {!posts && postsLoading && 
+                        <Spinner width={'48'} height={'48'} />
+                    }
+                </>
+                }
+                {currentOpt === 'Replies' && 
+                <>
+                    {replies && !repliesLoading && 
+                        replies.map((post, idx) => {
+                            return(
+                                <div key={idx}>
+                                    {post.originalPost && 
+                                        <Thread post={post.originalPost} reply={post}/>
+                                    }
+                                </div>
+                            )
+                        })
+                    }
+                    {replies && !repliesLoading && pagReplies?.current_page && pagReplies?.current_page !== pagReplies?.last_page && 
+                        <ShowMoreBtn fetchAction={fetchReplies} page={(pagReplies.current_page+1).toString()} loadFlag={loadMoreReplies}/>
+
+                    }
+
+                    {!repliesLoading && replies?.length === 0 &&
+                        displayMessage(`No replies found on this profile`)
+                    }
+                    {!replies && repliesLoading && 
+                    <Spinner width={'48'} height={'48'} />
+                    }
+                </>
+                }
+                {currentOpt === 'Media' && 
+                <>
+                    {media && !mediaLoading && 
+                        media.map((post, idx) => {
+                            return(
+                                <Post key={idx} post={post} selected={false}/>
+                            )
+                        })
+                    }
+                    {media && !mediaLoading && pagMedia?.current_page && pagMedia?.current_page !== pagMedia?.last_page && 
+                        <ShowMoreBtn fetchAction={fetchMedia} page={(pagMedia.current_page+1).toString()} loadFlag={loadMoreMedia}/>
+                    }
+
+                    {!mediaLoading && media?.length === 0 &&
+                        displayMessage(`No media found on this profile`)
+                    }
+                    {!media && mediaLoading && 
+                        <Spinner width={'48'} height={'48'} />
+                    }
+                </>
+                }
+                {currentOpt === 'Likes' && 
+                <>
+                    {likes && !likesLoading && 
+                        likes.map((post, idx) => {
+                            return(
+                                <Post key={idx} post={post} selected={false}/>
+                            )
+                        })
+                    }
+                    {likes && !likesLoading && pagLikes?.current_page && pagLikes?.current_page !== pagLikes?.last_page && 
+                        <ShowMoreBtn fetchAction={fetchLikes} page={(pagLikes.current_page+1).toString()} loadFlag={loadMoreLikes}/>
+                    }
+                    {!likesLoading && likes?.length === 0 &&
+                        displayMessage(`No likes found on this profile`)
+                    }
+                    {!likes && likesLoading && 
+                        <Spinner width={'48'} height={'48'} />
+                    }
+                </>
+                }
             </section>
+            </>
+            }
         </div>
     )
 }

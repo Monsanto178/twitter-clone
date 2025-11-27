@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notifications', function (Blueprint $table) {
-            $table->id();
+            $table->id()->autoIncrement();
             $table->foreignId('recipient_id')->constrained('user_profiles')->onDelete('cascade');
             // $table->foreignId('sender_id')->constrained('user_profiles')->onDelete('cascade');
             $table->foreignId('post_id')->nullable()->constrained('posts')->nullOnDelete();

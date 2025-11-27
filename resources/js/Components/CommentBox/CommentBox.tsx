@@ -1,8 +1,12 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EditModal } from "../MediaModal/EditModal";
 import React from "react";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
+import { fetchData } from "../../Utils";
+import defaultAvatar from "../../../assets/user_avatar_default.png";
+import { useReplyContext } from "../../Context/ReplyContext";
+import { DisplayMedia } from "../../Components/Media/DisplayMedia";
 
 type Emoji = {
   id: string;
@@ -15,7 +19,7 @@ type Emoji = {
 
 type Preview = {
     mimeType: string;
-    src: string;
+    url: string;
 }
 
 type MediaEditing = {
@@ -23,13 +27,19 @@ type MediaEditing = {
     idx: number
 }
 
+type ToUpdate = {
+    img: File;
+    idx: number;
+}
+
 type Props = {
     cover_img: string;
     replying?:boolean;
-    replyTo?:string;
+    replyTo?:{postId: string, username: string} | null;
+    modalOpen?: (close:boolean) => void;
 }
 
-export const CommentBox = ({cover_img, replying=false, replyTo=''}:Props) => {
+export const CommentBox = ({modalOpen, cover_img, replying=false, replyTo=null}:Props) => {
     const [TextAreaValue, setTextAreaValue] = useState<string>('');
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const [emojiBoxVisible, setEmojiBoxVisible] = useState(false);
@@ -37,9 +47,17 @@ export const CommentBox = ({cover_img, replying=false, replyTo=''}:Props) => {
 
     const [urlPreview, setUrlPreview] = useState<Preview[] | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const fileRef = useRef<HTMLInputElement>(null);
+    const inputFileRef = useRef<HTMLInputElement>(null);
 
     const [curMediaEditing, setCurMediaEditing] = useState<MediaEditing | null>(null);
+    const [updateFile, setUpdateFile] = useState<ToUpdate | null>(null);
+
+    const [sendModal, setSendModal] = useState(false);
+    const [isSending, setIsSending] = useState(false);
+    const [isSended, setIsSended] = useState(false);
+
+    const {setReloadReply} = useReplyContext();
+
 
 
     const handleEditFile = async (idx:number) => {
@@ -47,99 +65,126 @@ export const CommentBox = ({cover_img, replying=false, replyTo=''}:Props) => {
         const image = urlPreview[idx];
 
         if(!image.mimeType.startsWith('image')) return;
-        setCurMediaEditing({src:image.src, idx: idx});
+        setCurMediaEditing({src:image.url, idx: idx});
         setIsEditing(true);
         document.body.style.overflow = 'hidden';
     }
+    
+    // const classifyMedia = (media:Preview):ReactNode => {
+    //     if (!media) return;
 
-    const classifyMedia = (media:Preview):ReactNode => {
-        if (!media) return;
+    //     if(media.mimeType.startsWith('video/')) {
+    //         return <video src={media.src} controls className="w-full h-full object-cover transition-all duration-300 ease-in-out hover:scale-110"></video>
+    //     }
+    //     if(media.mimeType.startsWith('image/')) {
+    //         return <img src={media.src} alt="media_content" className="w-full h-full object-cover transition-all duration-300 ease-in-out hover:scale-110"/>
+    //     }
+    // }
 
-        if(media.mimeType.startsWith('video/')) {
-            return <video src={media.src} controls className="w-full h-full object-cover transition-all duration-300 ease-in-out hover:scale-110"></video>
+    const clearInputs = () => {
+        if(!isSended) return;
+
+        if(textareaRef.current) {
+            textareaRef.current.value = '';
+            setTextAreaValue('');
         }
-        if(media.mimeType.startsWith('image/')) {
-            return <img src={media.src} alt="media_content" className="w-full h-full object-cover transition-all duration-300 ease-in-out hover:scale-110"/>
+        if(inputFileRef.current) {
+            const emptyFileList = new DataTransfer();
+            inputFileRef.current.files = emptyFileList.files;
+            setUrlPreview(null);
+            
         }
     }
 
     const deleteFile = (idx:number) => {
-        if(!urlPreview) return
-        const newArr: Preview[] = []
-        URL.revokeObjectURL(urlPreview[idx].src);
+        if(!urlPreview) return;
+        if(!inputFileRef.current) return;
+
+        const newArr: Preview[] = [];
+        URL.revokeObjectURL(urlPreview[idx].url);
 
         urlPreview.map((el) => {
-            if(el.src === urlPreview[idx].src) return;
+            if(el.url === urlPreview[idx].url) return;
 
             newArr.push(el);
         })
         
         setUrlPreview(newArr);
+
+        const currentFiles = inputFileRef.current.files;
+        const dataTransfer = new DataTransfer();
+
+        if(!currentFiles) return;
+        Array.from(currentFiles).forEach((file, i) => {
+            if(i !== idx) dataTransfer.items.add(file);
+        })
+
+        inputFileRef.current.files = dataTransfer.files;
     }
 
-    const displayMedia = (mediaArr:Array<Preview>) => {
-        if(mediaArr.length<1) return;
-        if(mediaArr.length%2 === 0) {
-            return (
-                <>
-                {mediaArr.map((el, idx) => {
-                    return (
-                        <picture key={idx} className={`relative overflow-hidden bg-black w-[49%] ${mediaArr.length === 2 ? 'h-[25rem]' : 'h-[12.5rem]'} flex items-center gap-1`}>
-                            {classifyMedia(el)}
-                            <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-99">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                            </button>
-                            {el.mimeType.startsWith('image') && 
-                                <button onClick={() => {handleEditFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-99">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-                                </button>
-                            }
-                        </picture>
-                    )
-                })}
-                </>
-            )
-        } else {
-            return(
-                <>
-                <div className={`flex items-center bg-black overflow-hidden ${mediaArr.length === 3 ? 'w-[60%] h-[25rem]' : replying ? 'w-full h-[27rem]' : 'w-full h-full'}`}>
-                    <picture className="relative w-full h-full">
-                        {classifyMedia(mediaArr[0])}
-                        <button onClick={() => {deleteFile(0)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                        </button>
-                            {mediaArr[0].mimeType.startsWith('image') && 
-                                <button onClick={() => {handleEditFile(0)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-                                </button>
-                            }
-                    </picture>
-                </div>
-                {mediaArr.length>1 &&
-                    <div className="flex flex-col w-[39%] gap-1">
-                    {mediaArr.map((el, idx) => {
-                        if (idx !== 0) {
-                            return (
-                                <picture key={idx} className={`relative overflow-hidden bg-black h-[12.5rem] flex items-center gap-1`}>
-                                    {classifyMedia(el)}
-                                    <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                    </button>    
-                                    {el.mimeType.startsWith('image') && 
-                                        <button onClick={() => {handleEditFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-                                        </button>
-                                    }
-                                </picture>
-                            )
-                        }
-                    })}
-                    </div>
-                }
-                </>
-            )
-        }
-    }
+    // const displayMedia = (mediaArr:Array<Preview>) => {
+    //     if(mediaArr.length<1) return;
+    //     if(mediaArr.length%2 === 0) {
+    //         return (
+    //             <>
+    //             {mediaArr.map((el, idx) => {
+    //                 return (
+    //                     <picture key={idx} className={`relative overflow-hidden bg-black w-[49%] ${mediaArr.length === 2 ? 'h-[25rem]' : 'h-[12.5rem]'} flex items-center gap-1`}>
+    //                         {classifyMedia(el)}
+    //                         <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-99">
+    //                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    //                         </button>
+    //                         {el.mimeType.startsWith('image') && 
+    //                             <button onClick={() => {handleEditFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-99">
+    //                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+    //                             </button>
+    //                         }
+    //                     </picture>
+    //                 )
+    //             })}
+    //             </>
+    //         )
+    //     } else {
+    //         return(
+    //             <>
+    //             <div className={`flex items-center bg-black overflow-hidden ${mediaArr.length === 3 ? 'w-[60%] h-[25rem]' : replying ? 'w-full h-[27rem]' : 'w-full h-full'}`}>
+    //                 <picture className="relative w-full h-full">
+    //                     {classifyMedia(mediaArr[0])}
+    //                     <button onClick={() => {deleteFile(0)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
+    //                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    //                     </button>
+    //                         {mediaArr[0].mimeType.startsWith('image') && 
+    //                             <button onClick={() => {handleEditFile(0)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
+    //                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+    //                             </button>
+    //                         }
+    //                 </picture>
+    //             </div>
+    //             {mediaArr.length>1 &&
+    //                 <div className="flex flex-col w-[39%] gap-1">
+    //                 {mediaArr.map((el, idx) => {
+    //                     if (idx !== 0) {
+    //                         return (
+    //                             <picture key={idx} className={`relative overflow-hidden bg-black h-[12.5rem] flex items-center gap-1`}>
+    //                                 {classifyMedia(el)}
+    //                                 <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
+    //                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    //                                 </button>    
+    //                                 {el.mimeType.startsWith('image') && 
+    //                                     <button onClick={() => {handleEditFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
+    //                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+    //                                     </button>
+    //                                 }
+    //                             </picture>
+    //                         )
+    //                     }
+    //                 })}
+    //                 </div>
+    //             }
+    //             </>
+    //         )
+    //     }
+    // }
 
     const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         if(event.target.value.length>300) return;
@@ -163,28 +208,72 @@ export const CommentBox = ({cover_img, replying=false, replyTo=''}:Props) => {
         const urlArr:Preview[] = [];
         filesArr.map((file) => {
             const url = URL.createObjectURL(file);
-            urlArr.push({src:url, mimeType:file.type})
+            urlArr.push({url:url, mimeType:file.type})
         })
 
         setUrlPreview(urlArr);
     }
 
     const handleFileClick = () => {
-        if(!fileRef.current) return;
+        if(!inputFileRef.current) return;
 
-        fileRef.current.click();
+        inputFileRef.current.click();
+    }
+
+    const extractData = () => {
+        if(!inputFileRef.current) return;
+        if(!textareaRef.current) return;
+
+        const files = inputFileRef.current.files;
+        const text = textareaRef.current.value;
+        const formData = new FormData();
+        formData.append('text', text);
+
+        if (replying && replyTo?.postId) {
+            formData.append('parent', replyTo.postId);
+        }
+
+        if(files) {
+            console.log(files);
+            
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files[]', files[i])
+            }
+        }
+
+        return formData;
+    }
+
+    const sendPost = async () => {
+        const data = extractData();
+        if(!data) return;
+        
+        try {
+            setIsSending(true);
+
+            await fetchData<void>('/api/create/post', 'POST', data);
+
+            setIsSended(true);
+        } catch (error) {
+            setIsSended(false);
+            console.error(error);
+            return {error:true}
+        } finally {
+            setIsSending(false);
+            setSendModal(true);
+        }
     }
 
     useEffect(() => {
         if(!curMediaEditing) return;
         if(!urlPreview) return;
         
-        urlPreview[curMediaEditing.idx].src = curMediaEditing.src
+        urlPreview[curMediaEditing.idx].url = curMediaEditing.src
         setUrlPreview((prev) => {
             if(!prev) return prev;
             const update = [...prev];
 
-            update[curMediaEditing.idx].src = curMediaEditing.src;
+            update[curMediaEditing.idx].url = curMediaEditing.src;
 
             return update;
         })
@@ -205,11 +294,32 @@ export const CommentBox = ({cover_img, replying=false, replyTo=''}:Props) => {
         }
     }, [TextAreaValue]);
 
+    useEffect(() => {
+        if(!updateFile) return;
+        if(!inputFileRef.current) return;
+
+        const currentFiles = inputFileRef.current.files;
+        const dataTransfer = new DataTransfer();
+
+        if(!currentFiles) return;
+        Array.from(currentFiles).forEach((file, i) => {
+            if(i !== updateFile.idx) {
+                dataTransfer.items.add(file);
+                return;
+            };
+            
+            dataTransfer.items.add(updateFile.img);
+        })
+
+        inputFileRef.current.files = dataTransfer.files;
+
+    }, [updateFile])
+
     return (
         <>
         <div className={`flex w-full gap-2 p-4 ${replying ? 'z-99' : ''}`}>
             <picture className="w-[50px] h-[50px] rounded-[50%] overflow-hidden group shrink-0">
-                <img src={cover_img} alt="cover_img" className="w-full h-full" draggable={false}/>
+                <img src={cover_img ? cover_img : defaultAvatar} alt="cover_img" className="w-full h-full" draggable={false}/>
             </picture>
 
             <div className="flex flex-col w-full">
@@ -217,15 +327,30 @@ export const CommentBox = ({cover_img, replying=false, replyTo=''}:Props) => {
                     {replying && 
                         <div className="text-[16px] pb-2 flex gap-x-2">
                             <span className="opacity-50">Replying to:</span>
-                            <span className="text-blue-500">{replyTo}</span>
+                            <span className="text-blue-500">{replyTo?.username}</span>
                         </div>
                     }
-                    <textarea itemID="replyComment" ref={textareaRef} value={TextAreaValue} onChange={handleChange} maxLength={300} className="w-full resize-none h-content outline-none" name="" id="" placeholder="¿What are you thinking right now?"></textarea>
-                    <input ref={fileRef} type="file" onChange={handleFileChange} name="files" id="files[]" accept="video/*,image/*" multiple className="hidden"/>
+                    <textarea itemID="replyComment" 
+                        ref={textareaRef} value={TextAreaValue} 
+                        onChange={handleChange} maxLength={300} 
+                        className="w-full resize-none h-content outline-none" 
+                        name="textContent" 
+                        id="textArea" placeholder="¿What are you thinking right now?"></textarea>
+                    <input 
+                        ref={inputFileRef} type="file" 
+                        onChange={handleFileChange} 
+                        name="mediaFiles" 
+                        className="hidden"
+                        id="files" accept="video/*,image/*" multiple/>
                     
                     {urlPreview && 
                         <div className={`overflow-hidden rounded-[20px] justify-between items-stretch gap-1 flex flex-wrap`}>
-                            {displayMedia(urlPreview)}
+                            <DisplayMedia mediaArr={urlPreview} 
+                                deleteFile={deleteFile}
+                                handleClick={handleEditFile} 
+                                replying={replying}
+                                type="Edit"
+                            />
                         </div>
                     }
                 </div>
@@ -253,7 +378,9 @@ export const CommentBox = ({cover_img, replying=false, replyTo=''}:Props) => {
                         </div>
                     </div>
 
-                    <button className="flex items-center justify-center bg-[#BE3144] hover:bg-[#872341] cursor-pointer px-6 py-2 rounded-[20px]">
+                    <button 
+                        onClick={() => {sendPost()}}
+                        className={`flex items-center justify-center ${isSending ? 'bg-[#872341] cursor-wait' :'bg-[#BE3144] hover:bg-[#872341] cursor-pointer'} px-6 py-2 rounded-[20px]`} disabled={isSending ? true : false}>
                         <strong>Tweet</strong>
                     </button>
                 </div>
@@ -261,7 +388,31 @@ export const CommentBox = ({cover_img, replying=false, replyTo=''}:Props) => {
         </div>
         <article className={`transition-all duration-500 ease-in-out ${isEditing ? 'opacity-100 z-9999' : 'opacity-0'}`}>
             {isEditing && urlPreview && curMediaEditing &&
-                <EditModal src={curMediaEditing.src} idx={curMediaEditing.idx} setCurMediaEditing={setCurMediaEditing} setIsEditing={setIsEditing} replyingModal={replying}/>
+                <EditModal src={curMediaEditing.src} idx={curMediaEditing.idx} setCurMediaEditing={setCurMediaEditing} setIsEditing={setIsEditing} replyingModal={replying} setUpdateFile={setUpdateFile}/>
+            }
+        </article>
+        <article className={`transition-all duration-500 ease-in-out ${sendModal ? 'opacity-100 z-9999' : 'opacity-0'}`}>
+            {sendModal &&
+            <div className="w-screen h-screen fixed inset-0 flex justify-center items-center z-999 bg-[#000000cc]">
+                <div className="top-1/2 left-1/2 z-9999 p-8 min-w-[300px] max-h-[200px] bg-[#00224D] flex flex-col justify-between items-center gap-y-4 rounded-[10px]">
+                    <div>
+                        <span>{`${isSended ? '¡Post has been created successfully!' : 'Oops...Something went wrong'}`}</span>
+                    </div>
+                    <button
+                        onClick={() => {
+                            setSendModal(false); 
+                            setIsSended(false);
+                            if (modalOpen) {
+                                modalOpen(false)
+                                setReloadReply(true);
+                            };
+                            clearInputs();
+                        }}
+                        className="p-2 transition-all duration-300 ease-in-out rounded-[15px] hover:bg-white hover:text-black hover:font-[600] cursor-pointer">
+                            Accept
+                    </button>
+                </div>
+            </div>
             }
         </article>
         </>

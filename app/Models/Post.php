@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class Post extends Model
 {
@@ -34,20 +35,51 @@ class Post extends Model
     public function parent() {
         return $this->belongsTo(Post::class, 'parent_post_id');
     }
-    public function repost() {
+
+    public function bookmarks() {
+        return $this->belongsToMany(UserProfile::class, 'bookmarks');
+    }
+
+
+    public function quotes() {
         return $this->hasMany(Post::class, 'original_post_id');
     }
     public function originalPost() {
         return $this->belongsTo(Post::class, 'original_post_id');
     }
 
-    function repliesCount() {
+
+    public function repostedBy() {
+        return $this->belongsToMany(UserProfile::class, 'reposts', 'post_id', 'user_profile_id');
+    }
+
+    public function getLikedByCurProfileAttribute():bool {
+        // $userProfile = auth()->user()->profile;
+        $user = 1;
+        $profile = User::findOrFail($user)->profile;
+
+        return $profile ? $profile->hasLikedPost($this) : false;
+    }
+    public function getRepostedByCurProfileAttribute():bool {
+        $user = 1;
+        $profile = User::findOrFail($user)->profile;
+
+        return $profile ? $profile->hasReposted($this) : false;
+    }
+    public function getBookmarkedByCurProfileAttribute():bool {
+        $user = 1;
+        $profile = User::findOrFail($user)->profile;
+
+        return $profile ? $profile->hasBookmark($this) : false;
+    }
+
+    function getRepliesCountAttribute() {
         return $this->replies()->count();
     }
-    function likesCount() {
+    function getLikesCountAttribute() {
         return $this->likedBy()->count();
     }
-    function repostsCount() {
-        return $this->repost()->count();
+    function getRepostsCountAttribute() {
+        return $this->repostedBy()->count();
     }
 }

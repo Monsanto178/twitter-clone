@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('follow_users', function (Blueprint $table) {
-            $table->id();
+            $table->id()->autoIncrement();
             $table->foreignId('follower_id')->constrained('user_profiles')->onDelete('cascade');
             $table->foreignId('following_id')->constrained('user_profiles')->onDelete('cascade');
             $table->timestamps();

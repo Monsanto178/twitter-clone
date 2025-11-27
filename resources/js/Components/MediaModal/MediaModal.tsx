@@ -1,7 +1,9 @@
 import React, { ReactNode, useState } from "react";
 
 type Media = {
-    data: string | null;
+    url: string | null;
+    public_id?: string;
+    order?: number;
     mimeType: string;
 }
 
@@ -28,19 +30,19 @@ export const MediaModal = ({mediaData, current=0, setOpenModal}: Props) => {
     }
 
     const classifyMedia = (media:Media):ReactNode => {
-        if (!media.data) return;
+        if (!media.url) return;
 
         if(media.mimeType.startsWith('video/')) {
-            return <video src={media.data} controls className={`w-full h-auto object-cover transition-all duration-300 ease-in-out`} style={{translate: `${-100 * currentMedia}%`}}></video>
+            return <video src={media.url} controls className={`w-full h-auto object-cover transition-all duration-300 ease-in-out`} style={{translate: `${-100 * currentMedia}%`}}></video>
         }
         if(media.mimeType.startsWith('image/')) {
             return (
-                <img src={media.data} alt="media_content" className={`w-full h-auto object-contain transition-all duration-300 ease-in-out`} style={{translate: `${-100 * currentMedia}%`}}/>
+                <img src={media.url} alt="media_content" className={`w-full h-auto object-contain transition-all duration-300 ease-in-out`} style={{translate: `${-100 * currentMedia}%`}}/>
             )
         }
     }
     return(
-        <div onClick={closeModal} className="w-full h-screen fixed inset-0 flex justify-center items-center">
+        <div onClick={(e) => {closeModal(); e.stopPropagation();}} className="w-full h-screen fixed inset-0 flex justify-center items-center">
             <div className="fixed inset-0 bg-black opacity-85 w-screen h-screen"></div>
             <div onClick={(e) => e.stopPropagation()} className="fixed">
                 <button onClick={closeModal} className="absolute hidden md:block p-4 top-[-3rem] right-[-10rem] rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99">

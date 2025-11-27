@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('likes', function (Blueprint $table) {
-            $table->id();
+            $table->id()->autoIncrement();
             $table->foreignId('user_profile_id')->constrained('user_profiles')->onDelete('cascade');
             $table->foreignId('post_id')->constrained('posts')->onDelete('cascade');
 

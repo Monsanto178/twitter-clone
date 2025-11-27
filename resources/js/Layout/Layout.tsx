@@ -1,6 +1,10 @@
-import { SideMenu } from "../Components";
+import { ErrorBox, SideMenu } from "../Components";
 import { ReactNode } from "react"
 import { usePage } from "@inertiajs/react";
+import { ReplyProvider } from "../Context/ReplyContext";
+import { ProfileProvider } from "../Context/ProfileContext";
+import { ErrorProvider } from "../Context/ErrorContext";
+import Login from "../Pages/Login";
 
 type Props = {
     children: ReactNode;
@@ -11,12 +15,26 @@ export default function Layout({children}:Props) {
     const title = component.component;
     return (
         <>
-        <main className="bg-[#09122C] text-white h-full w-full flex justify-center px-2 mx-auto py-20 min-h-[100dvh]">
-            <SideMenu currentSelect={title}/>
-            <section className="flex flex-col min-w-[380px] max-w-[700px] w-full">
-                {children}
-            </section>
-        </main>
+        <ProfileProvider>
+            <ReplyProvider>
+                <ErrorProvider>
+                    <main className="relative bg-[#09122C] text-white h-full w-full flex justify-center px-2 mx-auto py-4 min-h-[100dvh]">
+                        {title !== 'Login' && 
+                            <>
+                            <SideMenu currentSelect={title}/>
+                            <section className="flex flex-col min-w-[380px] max-w-[700px] w-full pb-36">
+                                {children}
+                            </section>
+                            <ErrorBox/>
+                            </>
+                        }
+                        {title === 'Login' &&
+                            <Login />
+                        }
+                    </main>
+                </ErrorProvider>
+            </ReplyProvider>
+        </ProfileProvider>
         </>
     )
 }

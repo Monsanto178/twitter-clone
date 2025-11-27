@@ -6,24 +6,31 @@ type MediaEditing = {
     idx: number
 }
 
+type ToUpdate = {
+    img: File;
+    idx: number;
+}
+
 type Props = {
     src:string;
     idx:number;
     replyingModal: boolean;
     setCurMediaEditing: (media: MediaEditing | null) => void;
     setIsEditing: (bool:boolean) => void;
+    setUpdateFile: (fileData: ToUpdate) => void
 }
 
-export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, replyingModal}:Props) => {
+export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdateFile, replyingModal}:Props) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
     const imageRef = useRef<fabric.FabricImage>(null);
-    // const [imgAngle, setImgAngle] = useState(0);
     const cropRef = useRef<fabric.Rect>(null);
     const [curEditing, setCurEditing] = useState(false);
     const [tempMedia, setTempMedia] = useState<MediaEditing>({src: src, idx: idx});
     const [canvasW, setCanvasW] = useState<number>(1200);
     const [canvasH, setCanvasH] = useState<number>(600);
+
+    const [croppedImg, setCroppedImg] = useState<ToUpdate | null>(null);
 
     const closeModal = () => {
         setIsEditing(false);
@@ -40,6 +47,9 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, replyingM
 
         closeModal();
         setCurMediaEditing(tempMedia)
+        if(croppedImg) {
+            setUpdateFile(croppedImg);
+        }
     };
 
 
@@ -141,6 +151,19 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, replyingM
                 relHeight
             );
 
+            croppedCanvas.toBlob((blob) => {
+                if(blob) {
+                    const file = new File([blob], 'edited_image.png', {type: 'image/png'});
+                    
+                    const fileData: ToUpdate = {
+                        img: file,
+                        idx: idx
+                    };
+
+                    setCroppedImg(fileData);
+                }
+            })
+
             const croppedDataURL = croppedCanvas.toDataURL('image/png');
 
             fabric.FabricImage.fromURL(croppedDataURL).then((newImg) => {
@@ -161,14 +184,6 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, replyingM
             });
         };
     }
-
-    // const rotateImage = () => {
-    //     setImgAngle((prev) => {
-    //         if(prev === 270) return 0;
-    //         return prev + 90
-    //     })
-    // }
-
 
     useEffect(() => {
         const handleResize = () => {
@@ -414,28 +429,61 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, replyingM
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[24px] md:w-[32px] h-[24px] md:h-[32px] lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
                 <canvas className="absolute inset-0 bg-black-500 border border-2" ref={canvasRef} />
-                <div className='absolute p-2 md:p-4 buttom-[0.5rem] md:buttom-[0.25rem] left-[0.25rem] md:left-[0.5rem] flex gap-4 w-full'>
-                    <div className={`${curEditing ? 'block' : 'hidden'} flex justify-between w-full`}>
+                <div className='absolute p-2 buttom-[0.5rem] md:buttom-[0.25rem] left-[0.25rem] md:left-[0.5rem] flex gap-4 w-full'>
+                    <div className={`${curEditing ? 'block' : 'hidden'} flex justify-evenly w-full`}>
                         <button onClick={() => {setCurEditing(false)}} className={`${curEditing ? 'block' : 'hidden'} rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99`}>
                             Cancel
                         </button>
                         <button onClick={handleCropImg} className={`rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99`}>
-                            Accept
+                            Apply
                         </button>
                     </div>
-                    <div className={`${curEditing ? 'hidden' : 'block'} flex justify-between w-full`}>
-                        <button onClick={() => {setCurEditing(true)}} className={`rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99`}>
-                            Crop
+                    <div className={`${curEditing ? 'hidden' : 'block'} flex justify-evenly w-full`}>
+                        <button onClick={() => {closeModal(); DismissFile();}} className="p-2 rounded-[50%] transition-all duration-300 ease-in-out hover:bg-red-500 cursor-pointer z-99">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                width="24" 
+                                height="24" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="#ffffff" 
+                                strokeWidth="2" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                className="lucide lucide-x-icon lucide-x">
+                                    <path d="M18 6 6 18"/>
+                                    <path d="m6 6 12 12"/>
+                            </svg>
                         </button>
-                        <button onClick={FinishEdit} className="rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99">
-                            Finish
+                        <button onClick={() => {setCurEditing(true)}} className={`p-2 rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" 
+                                width="24" 
+                                height="24" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="#ffffff" 
+                                strokeWidth="2" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                className="lucide lucide-crop-icon lucide-crop">
+                                    <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
+                                    <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+                            </svg>
+                        </button>
+                        <button onClick={FinishEdit} className="p-2 rounded-[50%] transition-all duration-300 ease-in-out hover:bg-green-400 cursor-pointer z-99">
+                            <svg xmlns="http://www.w3.org/2000/svg" 
+                                width="24" 
+                                height="24" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="#ffffff" 
+                                strokeWidth="2" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                className="lucide lucide-check-icon lucide-check">
+                                    <path d="M20 6 9 17l-5-5"/>
+                            </svg>
                         </button>
                     </div>
-
-                    {/* <button onClick={rotateImage} className="rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99">
-                        Rotate
-                    </button> */}
-
                 </div>
             </div>
         </div>

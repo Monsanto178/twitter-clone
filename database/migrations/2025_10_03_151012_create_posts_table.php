@@ -10,9 +10,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('posts', function (Blueprint $table) {
-            $table->id();
+            $table->id()->autoIncrement();
             $table->foreignId('user_profile_id')->constrained('user_profiles')->onDelete('cascade');
             $table->foreignId('original_post_id')->nullable()->constrained('posts')->onDelete('set null');
+            $table->foreignId('parent_post_id')->nullable()->constrained('posts')->onDelete('set null');
             $table->text('post_text')->nullable();
             $table->timestamps();
         });

@@ -8,7 +8,8 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "baseUrl": "./resources/js"
+    "baseUrl": "./resources/js",
+    "lib": ["esnext", "dom"]
   },
   "include": ["resources/js/**/*"]
 }

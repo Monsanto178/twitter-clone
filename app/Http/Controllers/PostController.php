@@ -2,295 +2,145 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Media;
 use App\Models\Post;
-use App\Models\User;
-use App\Models\UserProfile;
-use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
-use Illuminate\Validation\ValidationException;
+use App\Services\PostService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
+    private postService $postService;
+
+    public function __construct(PostService $postService)
+    {
+       $this->postService = $postService;
+    }
+
     function create(Request $request) {
-        try {
-            DB::beginTransaction();
+        $data = $request->all();
+        $data['profile_id'] = Auth::user()->profile->id;
+        
+        $createPost = $this->postService->createPost($data);
 
-            $request->validate([
-                'text' => 'required|string|max:280'
-            ]);
-
-            $userId = Auth::id();
-            $user = User::with('profile')->findOrFail($userId);
-
-            $profile = $user->profile;
-            $profileId = $profile->id;
-
-            $post = Post::create([
-                'user_profile_id' => $profileId,
-                'original_post_id' => null,
-                'parent_post_id' => $request->input('parent'),
-                'post_text' => $request->input('text')
-            ]);
-
-            $postId = $post->id;
-
-            if(!$request->hasFile('files')) {
-                DB::commit();
-                return response()->json(['Successfully created']);
-            };
-
-            $request->validate([
-                'file.*' => 'required|file|mimes:jpg,jpeg,png,gif,mp4,mkv,avi|max:30000'
-            ]);
-
-            $files = $request->file('files');
-            Log::info('files', ['files' => $files]);
-            //Cloudinary Case
-
-            // foreach ($files as $idx => $file) {
-            //     $uploadedImg = cloudinary()->uploadApi()->upload(
-            //         $file->getRealPath(), 
-            //         [
-            //             'folder' => 'uploads',
-            //             'transformation' => 
-            //             [
-            //                 'quality' => 'auto',
-            //                 'fetch_format' => 'auto',
-            //             ]
-            //         ]
-            //     );
-
-            //     $mimeType = $file->getMimeType();
-            //     $order = $idx;
-            //     $fileUrl = $uploadedImg['secure_url'];
-            //     $publicId = $uploadedImg['public_id'];
-
-            //     Media::create([
-            //         'url' => $fileUrl,
-            //         'mimeType' => $mimeType,
-            //         'order' => $order,
-            //         'public_id' => $publicId,
-            //         'post_id' => $postId
-            //     ]);
-            // }
-
-            //Storage Case
-
-            foreach ($files as $idx => $file) {
-                $filePath = $file->store('posts', 'public');
-                $mimeType = $file->getMimeType();
-                $mimeType = $file['mimeType'];
-                $order = $idx;
-                $publicId = null;
-                Log::info('result', ['Archivo Subido' => $filePath]);
-
-                Media::create([
-                    'url' => $filePath,
-                    'mimeType' => $mimeType,
-                    'order' => $order,
-                    'public_id' => $publicId,
-                    'post_id' => $postId
-                ]);
-            }
-            
-
-            DB::commit();
-            return response()->json(['Successfully created']);
-        } catch (ValidationException $e) {
-            DB::rollBack();
-
+        if($createPost['status'] === 'error') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'A validation error has occurred',
-                'error' => $e
-            ], 422);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::info('Error', ['error' => $e]);
-
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Internal server error',
-                'error' => $e
-            ], 500);
+                'message' => $createPost['message'],
+                'error' => $createPost['error']
+            ], $createPost['code']);
         }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $createPost['message']
+        ], 201);
     }
 
     function index() {
-        try {
-            $posts = Post::with(['userProfile', 'media'])
-            ->withCount([
-                'likedBy as likes', 
-                'replies as replies', 
-                'repost as reposts',
-                'userProfile.followers as followers',
-                'userProfile.following as following'
-                ])
-            ->latest()
-            ->paginate(10);
+        $indexPosts = $this->postService->getHomePosts();
 
-            return response()->json($posts);
-        } catch (\Exception $e) {
-            Log::info('Error', ['error' => $e]);
-
+        if($indexPosts['status'] === 'error') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Internal server error',
-                'error' => $e
-            ], 500);
+                'message' => $indexPosts['message'],
+                'error' => $indexPosts['error']
+            ], $indexPosts['code']);
         }
+
+        return response()->json($indexPosts['data'], 200);
     }
 
     function getPost(Request $request) {
-        try {
-            $postId = $request->get('postId');
-            $post = Post::with(['userProfile:id,name,username,avatar', 'media'])
-                ->withCount('likedBy as likes', 'replies as replies', 'repostedBy as reposts')
-                ->findOrFail($postId);
-
-            $post->append('liked_by_cur_profile');
-            $post->append('reposted_by_cur_profile');
-            $post->append('bookmarked_by_cur_profile');
-
-            return response()->json($post);
-        } catch (\Exception $e) {
-            Log::warning('something went wrong', ['Something:' => $e]);
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Internal server error',
-                'error' => $e
-            ], 500);
-        }
-    }
-    function getReplies(Request $request) {
-        try {
-            $postId = $request->get('postId');
-
-            $replies = Post::with(['userProfile:id,name,username,avatar', 'media'])
-              ->withCount(['likedBy as likes', 'replies as replies', 'repostedBy as reposts'])
-              ->where('parent_post_id', $postId)
-              ->get();;
-
-            foreach ($replies as $reply) {
-                $reply->append('liked_by_cur_profile');
-                $reply->append('reposted_by_cur_profile');
-                $reply->append('bookmarked_by_cur_profile');
-            }
-
-            return response()->json($replies);
-        } catch (\Exception $e) {
-            Log::warning('something went wrong', ['Something:' => $e]);
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Internal server error',
-                'error' => $e
-            ], 500);
-        }
-    }
-
-    function quote($postId) {
-        try {
-            $post = Post::with(['userProfile:id,name,username,avatar', 'media'])->findOrFail($postId);
+        $postId = $request->input('postId');
         
-            return response()->json($post);
-        } catch (\Exception $e) {
+        $post = $this->postService->getPost($postId);
+
+        if($post['status'] === 'error') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Internal server error',
-                'error' => $e
-            ], 500);
+                'message' => $post['message'],
+                'error' => $post['error']
+            ], $post['code']);
         }
+
+        return response()->json($post['data']['post'], 200);
     }
+
+    function getReplies(Request $request) {
+        $postId = $request->input('postId');
+        
+        $replies = $this->postService->getPostReplies($postId);
+
+        if($replies['status'] === 'error') {
+            return response()->json([
+                'status' => 'error',
+                'message' => $replies['message'],
+                'error' => $replies['error']
+            ], $replies['code']);
+        }
+
+        return response()->json($replies['data']['replies'], 200);
+    }
+
+    // function quote($postId) {
+    //     try {
+    //         $post = Post::with(['userProfile:id,name,username,avatar', 'media'])->findOrFail($postId);
+        
+    //         return response()->json($post);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'Internal server error',
+    //             'error' => $e
+    //         ], 500);
+    //     }
+    // }
 
     function like(Request $request) {
-        try {
-            $userId = Auth::id();
-            $user = User::with('profile')->findOrFail($userId);
+        $postId = $request->input('postId');
+        
+        $replies = $this->postService->likePost($postId);
 
-            $profile = $user->profile;
-            $postId = $request->postId;
-
-            $post = Post::findOrFail($postId);
-
-            if($profile->hasLikedPost($post)) {
-                $profile->likeTo()->detach($post);
-
-                return response()->json(['message' => 'Like removed'], 200);
-            }
-
-            $profile->likeTo()->attach($post);
-
-            return response()->json(['message' => 'Liked'], 200);
-        } catch (\Throwable $e) {
-            Log::error('error', ['error this time:' => $e]);
+        if($replies['status'] === 'error') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Internal server error',
-                'error' => $e
-            ], 500);
+                'message' => $replies['message'],
+                'error' => $replies['error']
+            ], $replies['code']);
         }
+
+        return response()->json(['Success'], 200);
     }
 
     function bookmark(Request $request) {
-        try {
-            $userId = Auth::id();
-            $user = User::with('profile')->findOrFail($userId);
+        $postId = $request->input('postId');
+        
+        $replies = $this->postService->likePost($postId);
 
-            $profile = $user->profile;
-            $postId = $request->postId;
-
-            $post = Post::findOrFail($postId);
-
-            if($profile->hasBookmark($post)) {
-                $profile->bookmarks()->detach($post);
-
-                return response()->json(['message' => 'bookmark removed'], 200);
-            }
-
-            $profile->bookmarks()->attach($post);
-
-            return response()->json(['message' => 'Bookmarked'], 200);
-        } catch (\Throwable $e) {
-            Log::error('error', ['error this time:' => $e]);
+        if($replies['status'] === 'error') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Internal server error',
-                'error' => $e
-            ], 500);
+                'message' => $replies['message'],
+                'error' => $replies['error']
+            ], $replies['code']);
         }
+
+        return response()->json(['Success'], 200);
     }
     function repost(Request $request) {
-        try {
-            $userId = Auth::id();
-            $user = User::with('profile')->findOrFail($userId);
+        $postId = $request->input('postId');
+        
+        $repost = $this->postService->repostPost($postId);
 
-            $profile = $user->profile;
-            $postId = $request->postId;
-
-            $post = Post::findOrFail($postId);
-
-            if($profile->hasReposted($post)) {
-                $profile->reposts()->detach($post);
-
-                return response()->json(['message' => 'Repost removed'], 200);
-            }
-
-            $profile->reposts()->attach($post);
-
-            return response()->json(['message' => 'Reposted'], 200);
-        } catch (\Throwable $e) {
-            Log::error('error', ['error this time:' => $e]);
+        if($repost['status'] === 'error') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Internal server error',
-                'error' => $e
-            ], 500);
+                'message' => $repost['message'],
+                'error' => $repost['error']
+            ], $repost['code']);
         }
+
+        return response()->json(['Success'], 200);
     }
 
     function destroy($postId) {

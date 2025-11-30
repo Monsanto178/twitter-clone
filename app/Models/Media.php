@@ -11,7 +11,6 @@ class Media extends Model
 
     protected $fillable = [
         'url',
-        'public_id',
         'mimeType',
         'order',
         'post_id'

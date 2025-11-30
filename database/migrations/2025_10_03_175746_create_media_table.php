@@ -11,7 +11,6 @@ return new class extends Migration
         Schema::create('media', function (Blueprint $table) {
             $table->id()->autoIncrement();
             $table->string('url');
-            $table->string('public_id');
             $table->string('mimeType');
             $table->integer('order')->default(0);
             $table->foreignId('post_id');

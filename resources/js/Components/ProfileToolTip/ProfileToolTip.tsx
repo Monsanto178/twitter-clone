@@ -1,10 +1,10 @@
-import defaultAvatar from "../../../assets/user_avatar_default.png";
+import defaultAvatar from "@assets/user_avatar_default.png";
 import { useEffect, useState } from "react";
 import { Spinner } from "../Loading/Spinner";
 import NumberFlow from "@number-flow/react";
-import { useUserProfile } from '../../Context/ProfileContext';
-import { useErrorContext } from "../../Context/ErrorContext";
-import { FullUserType } from '../../Types/FullUserType';
+import { useUserProfile } from '@/Context/ProfileContext';
+import { useErrorContext } from "@/Context/ErrorContext";
+import { FullUserType } from '@/Types/FullUserType';
 
 
 type Props = {
@@ -83,7 +83,7 @@ export const ProfileToolTip = ({profId}:Props) => {
                 <a 
                     href={`/profile/${localProfile.profile.id}`}
                     className="w-fit">
-                    <span>{localProfile.profile.username}</span>                
+                    <span className="text-gray-400">@{localProfile.profile.username}</span>                
                 </a>
             </div>
 
@@ -96,14 +96,14 @@ export const ProfileToolTip = ({profId}:Props) => {
                     <strong>
                         <NumberFlow value={localProfile.profile.following}/>
                     </strong>
-                    <span>Following</span>
+                    <span className="text-gray-400">Following</span>
                 </div>
 
                 <div className="flex gap-1">
                     <strong>
                         <NumberFlow value={localProfile.profile.followers}/>
                     </strong>
-                    <span>Followers</span>
+                    <span className="text-gray-400">Followers</span>
                 </div>
             </div>
             </>

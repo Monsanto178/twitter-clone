@@ -1,92 +1,144 @@
-import { Post, CommentBox} from "../Components";
-import content from '../../assets/content.jpg';
-import cover from '../../assets/cover.jpg';
-import example_video from '../../assets/video_example.mp4';
-import img_example_1 from '../../assets/img_example_1.jpg';
+import { Post, CommentBox, Spinner, ShowMoreBtn, Thread} from "@/Components";
 import { useEffect, useState } from "react";
-import { PostType } from "Types";
-// import img_example_2 from '../../assets/img_example_2.jpg';
+import { PostType } from "@/Types";
+import { fetchData } from "@/Utils";
+import defaultAvatar from "@assets/user_avatar_default.png";
 
-type Media = {
-    url: string;
-    public_id?: string;
-    order?: number;
-    mimeType: string;
-}
-const contenido:Media = {
-    url:example_video,
-    mimeType: 'video/mp4'
-}
-const contenido2:Media = {
-    url:content,
-    mimeType: 'image/jpg'
-}
-const contenido3:Media = {
-    url: img_example_1,
-    mimeType: 'image/jpg'
+type Response = {
+    status: 'success' | 'error';
+    code: number;
+    message: string;
+    error?: string;
+    data?: {avatar: string};
 }
 
-type Props = {
+type PaginatedPosts = {
     current_page: number,
-    data: Array<PostType>,
-    from: number,
-    to: number,
+    data: PostType[]
+    total: number,
     last_page: number
 }
-
-const Posteo: PostType = {
-    id:1,
-    replies:12,
-    likes:15,
-    reposts:3,
-    liked_by_cur_profile:true,
-    bookmarked_by_cur_profile:false,
-    reposted_by_cur_profile:false,
-    post_text:`La tecnología ha avanzado a pasos agigantados en las últimas décadas, transformando la manera en que vivimos, trabajamos y nos relacionamos. 
-        Desde la aparición de Internet hasta los desarrollos más recientes en inteligencia artificial, hemos sido testigos de una revolución que no solo ha cambiado la economía global, sino que también ha alterado profundamente nuestras experiencias cotidianas. 
-        Sin embargo, este progreso no está exento de desafíos y cuestionamientos, ya que surgen preguntas sobre cómo balancear la innovación con la ética, la privacidad y el impacto social. 
-        Es fundamental que, al avanzar, tengamos en cuenta no solo el potencial de la tecnología, sino también sus posibles repercusiones en el futuro de la humanidad.`,
-    created_at:'2025-11-06 00:39:29',
-    user_profile: {
-        user_id:'2',
-        id:2,
-        username:'@Joleas_12',
-        name:'Jorge',
-        avatar:cover,
-    },
-    media:[contenido3, contenido2, contenido]
+type Stats = {
+    current_page: number,
+    total: number,
+    last_page: number
 }
-
-const Posteo2: PostType = {
-    id:2,
-    replies:12,
-    likes:15,
-    reposts:3,
-    liked_by_cur_profile:true,
-    bookmarked_by_cur_profile:false,
-    reposted_by_cur_profile:false,
-    post_text:`La tecnología ha avanzado a pasos agigantados en las últimas décadas, transformando la manera en que vivimos, trabajamos y nos relacionamos. 
-        Desde la aparición de Internet hasta los desarrollos más recientes en inteligencia artificial, hemos sido testigos de una revolución que no solo ha cambiado la economía global, sino que también ha alterado profundamente nuestras experiencias cotidianas. 
-        Sin embargo, este progreso no está exento de desafíos y cuestionamientos, ya que surgen preguntas sobre cómo balancear la innovación con la ética, la privacidad y el impacto social. 
-        Es fundamental que, al avanzar, tengamos en cuenta no solo el potencial de la tecnología, sino también sus posibles repercusiones en el futuro de la humanidad.`,
-    created_at:'2025-11-06 00:39:29',
-    user_profile: {
-        user_id:'1',
-        id:3,
-        username:'@Joleas_12',
-        name:'Jorge',
-        avatar:cover,
-    },
-    media:[]
-}
-
+// type PaginatedPosts = {
+//     posts: Array<PostType>,
+//     stats: PaginatedStats
+// }
 
 export default function Home() {
+    const [profilePic, setProfilePic] = useState<string | null>(null);
+    const [posts, setPosts] = useState<PostType[] | null>(null);
+    const [stats, setStats] = useState<Stats | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [loadMore, setLoadMore] = useState<boolean>(false);
+    const [errorState, setErrorState] = useState<string | null>(null);
+
+    async function getProfPic() {
+        try {
+            const response = await fetchData<Response>('/getProfilePic', 'GET');
+            
+            if(response.data) setProfilePic(response.data.avatar);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function fetchPosts(page:string | null = null) {
+        const formData = new FormData();
+        if(page) formData.append('page', page);
+
+        try {
+            if(posts) setLoadMore(true);
+            const postsData = await fetchData<PaginatedPosts>('/api/post/all', "POST", formData);
+            
+            if(posts) {
+                const sumArray = posts.concat(postsData.data);
+                setPosts(sumArray);
+                const stats : Stats = {
+                    current_page: postsData.current_page,
+                    last_page: postsData.last_page,
+                    total: postsData.total,
+                }
+                setStats(stats);
+
+                return;
+            }
+
+            const stats : Stats = {
+                current_page: postsData.current_page,
+                last_page: postsData.last_page,
+                total: postsData.total,
+            }
+            setStats(stats);
+            setPosts(postsData.data);
+
+        } catch (e) {
+            console.error(e);
+            setErrorState('Oops... Cannot load posts right now. Please try again later');
+        } finally {
+            setLoading(false);
+            setLoadMore(false);
+        }
+    }
+
+    // async function fetchParentPost(parentId: number):Promise<PostType | null> {
+    //     const formData = new FormData();
+    //     formData.append('id', parentId.toString());
+
+    //     try {
+    //         const response = await fetchData<PostType>('/api/getParent', 'POST', formData);
+            
+    //         return response;
+    //     } catch (e) {
+    //         console.error(e);
+    //         return null;
+    //     }
+    // }
+
+    useEffect(() => {
+        if(profilePic) return;
+
+        getProfPic();
+    }, [])
+
+    useEffect(() => {
+        if(posts) return;
+
+        fetchPosts();
+    }, [])
     return (
         <>
-            <CommentBox cover_img={Posteo.user_profile.avatar}/>
-            <Post post={Posteo} selected={false}/>
-            <Post post={Posteo2} selected={false}/>
+            <CommentBox cover_img={profilePic ? profilePic : defaultAvatar}/>
+            <section className="flex flex-col">
+                {loading && 
+                    <Spinner width="48" height="48"/>
+                }
+
+                {!loading && errorState && 
+                    <div className="flex justify-center items-center">
+                        <span>{errorState}</span>
+                    </div>
+                }
+
+                {!loading && posts && 
+                    posts.map((post, idx) => {
+                        if (post.parent_post_id) {
+                            if(post.originalPost) return <Thread key={idx} post={post.originalPost} reply={post}/>
+                            
+                            return <Post key={idx} post={post} selected={false}/>
+                        }
+
+                        if(!post.parent_post_id) return <Post key={idx} post={post} selected={false}/>
+                    })
+                    
+                }
+                {posts && !loading && stats?.current_page && stats?.current_page !== stats?.last_page && 
+                    <ShowMoreBtn fetchAction={fetchPosts} page={(stats.current_page+1).toString()} loadFlag={loadMore}/>
+                }
+            </section>
         </>
         )
 }

@@ -1,8 +1,8 @@
-import { Post, PostSkeleton, BackBar} from "../Components";
+import { Post, PostSkeleton, BackBar, Spinner, ReplyThread} from "@/Components";
 import { useEffect, useState } from "react";
-import { getCsrfToken } from "../Utils";
-import { PostType } from "Types";
-import { useReplyContext } from "../Context/ReplyContext";
+import { fetchData } from "@/Utils";
+import { PostType } from "@/Types";
+import { useReplyContext } from "@/Context/ReplyContext";
 
 type Props = {
     postId: string;
@@ -11,60 +11,64 @@ type Props = {
 export default function PostPage({postId}: Props) {
     const [post, setPost] = useState<PostType | null>(null);
     const [loadingPost, setLoadingPost] = useState(true);
+    const [postErrors, setPostErrors] = useState<string | null>(null)
 
     const [replies, setReplies] = useState<Array<PostType> | null>(null);
     const [loadingReplies, setLoadingReplies] = useState(true);
+    const [repliesErrors, setRepliesErrors] = useState<string | null>(null)
+
+    const [parentPost, setParentPost] = useState<PostType | null>(null);
+    const [loadingParent, setLoadingParent] = useState<boolean>(true);
 
     const {reloadReply, setReloadReply} = useReplyContext();
 
     const fetchPost = async () => {
+        const formData = new FormData();
+        formData.append('postId', postId);
+
         try {
-            const csrfToken = await getCsrfToken();
-            const formData = new FormData();
-            formData.append('postId', postId);
+            const response = await fetchData<PostType>('/api/getpost', 'POST', formData);
 
-            const response = await fetch('/getpost', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: formData
-            })
-            if(!response.ok) throw new Error("SOMETHING WENT WRONG.");
-            const data = await response.json();
-
-            setPost(data)
-            console.log(data);
-            
+            setPost(response);
 
         } catch (error) {
             console.error(error);
+            setPostErrors('Oops... Cannot load posts right now. Please try again later');
         } finally {
             setLoadingPost(false)
         }
     }
 
-    const fetchReplies = async () => {
+    const fetchParent = async (id:string) => {
+        const formData = new FormData();
+        formData.append('postId', id);
+
         try {
-            const csrfToken = await getCsrfToken();
-            const formData = new FormData();
-            formData.append('postId', postId);
+            const response = await fetchData<PostType>('/api/getpost', 'POST', formData);
 
-            const response = await fetch('/replies', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: formData
-            })
-            if(!response.ok) throw new Error("SOMETHING WENT WRONG.");
-            const data = await response.json();
+            setParentPost(response);
 
-            setReplies(data);
         } catch (error) {
             console.error(error);
         } finally {
-            setLoadingReplies(false);
+            setLoadingParent(false)
+        }
+    }
+
+    const fetchReplies = async () => {
+        const formData = new FormData();
+        formData.append('postId', postId);
+
+        try {
+            const response = await fetchData<PostType[]>('/api/replies', 'POST', formData);
+
+            setReplies(response);
+
+        } catch (error) {
+            console.error(error);
+            setRepliesErrors('Oops... Cannot load posts right now. Please try again later');
+        } finally {
+            setLoadingReplies(false)
         }
     }
     
@@ -85,58 +89,77 @@ export default function PostPage({postId}: Props) {
         fetchReplies();
     }, [post])
 
+    useEffect(() => {
+        if(!post) return
+        if(!post.parent_post_id) return;
+
+        const postId = post.parent_post_id.toString();
+        fetchParent(postId);
+    }, [post])
+
     return (
         <>
-        {!loadingPost && post &&
-            <section className="flex flex-col px-4 gap-y-4">
-                <BackBar text="Post"/>
-                <Post post={post} selected={true}/>
-                {replies &&
+        <section className="flex flex-col px-4 gap-y-4">
+            <BackBar text="Post"/>
+            {!loadingPost && post &&
                 <>
-                <div className="mb-2">
-                    <span>{replies.length>0 ? 'Replies to this post:' : 'This post has no replies.'}</span>
-                </div>
-                <div className="flex flex-col">
-                    {replies.length>0 && 
-                        replies.map((reply, idx) => {
-                            return (
-                                <Post key={idx} post={reply} selected={false}/>
-                            )
-                        })
+                    {post.parent_post_id && loadingParent && 
+                    <div className="flex justify-center items-center">
+                        <Spinner height="48" width="48"/>
+                    </div>
                     }
-                </div>
-                </>
-                }
+                    {post.parent_post_id && !loadingParent && parentPost &&
+                        <ReplyThread post={parentPost} reply={post}/>
+                    }
+                    {!post.parent_post_id && 
+                        <Post post={post} selected={true} />
+                    }
+                    {replies &&
+                    <>
+                    <div className="mb-2 flex justify-center items-center">
+                        <span>{replies.length>0 ? 'Replies to this post:' : 'This post has no replies.'}</span>
+                    </div>
+                    <div className="flex flex-col">
+                        {replies.length>0 && 
+                            replies.map((reply, idx) => {
+                                return (
+                                    <Post key={idx} post={reply} selected={false}/>
+                                )
+                            })
+                        }
+                    </div>
+                    </>
+                    }
 
-                {loadingReplies && 
-                <div className="flex justify-center items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" 
-                        width="48" 
-                        height="48" 
-                        viewBox="0 0 24 24">
-                        <path 
-                            fill="none" 
-                            stroke="#fff" 
-                            strokeLinecap="round" 
-                            strokeWidth="1.5" 
-                            d="M12 6.99998C9.1747 6.99987 6.99997 9.24998 7 12C7.00003 14.55 9.02119 17 12 17C14.7712 17 17 14.75 17 12">
-                            <animateTransform 
-                                attributeName="transform" 
-                                attributeType="XML" 
-                                dur="860ms" 
-                                from="0,12,12" 
-                                repeatCount="indefinite" 
-                                to="360,12,12" 
-                                type="rotate"/>
-                        </path>
+                    {loadingReplies && 
+                    <div className="flex justify-center items-center">
+                        <Spinner height="48" width="48"/>
+                    </div>
+                    }
+
+                    {!loadingReplies && repliesErrors && 
+                        <div className="flex justify-center items-center mt-4">
+                            <span>{repliesErrors}</span>
+                        </div>
+                    }
+                </>
+            }
+            {loadingPost &&
+                <PostSkeleton/>
+            }
+            {!loadingPost && postErrors &&
+                <div className="flex flex-col justify-center items-center mt-4 gap-y-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 24 24">
+                        <g fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                            <path d="m13.5 8.5l-5 5m0-5l5 5" />
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21l-4.3-4.3" />
+                        </g>
                     </svg>
+                    <span>{postErrors}</span>
                 </div>
-                }
-            </section>
-        }
-        {loadingPost &&
-            <PostSkeleton/>
-        }
+            }
+        </section>
         </>
     )
 }

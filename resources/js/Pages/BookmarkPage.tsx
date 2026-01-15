@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { BackBar, Post, Spinner } from "../Components";
-import { PostType } from "../Types";
-import { fetchData } from "../Utils";
-import { useErrorContext } from "../Context/ErrorContext";
+import { BackBar, Post, Spinner } from "@/Components";
+import { PostType } from "@/Types";
+import { fetchData } from "@/Utils";
+import { useErrorContext } from "@/Context/ErrorContext";
 
 type PaginatedStats = {
     current_page: number,
@@ -39,8 +39,7 @@ export default function BookmarkPage({profileId}:Props) {
 
         try {
             if(paginatedPosts) setPostLoading(true);
-            const data = await fetchData<PaginatedPosts>('/bookmarks/getBookmarks', 'POST', formData);
-            console.log(data);
+            const data = await fetchData<PaginatedPosts>('/api/bookmarks/getBookmarks', 'POST', formData);
             
             if(paginatedPosts) {
                 const sumArray = paginatedPosts.posts.concat(data.posts);
@@ -85,6 +84,18 @@ export default function BookmarkPage({profileId}:Props) {
             }
             {postsLoading && !paginatedPosts && 
              <Spinner width="48" height="48"/>
+            }
+            {!postsLoading && paginatedPosts && paginatedPosts?.posts.length < 1 && 
+                <div className="flex flex-col justify-center items-center gap-y-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 26 26">
+                        <g fill="#fff">
+                            <path fillRule="evenodd" d="M7.5 6a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 .5.5v14a.5.5 0 0 1-.855.352L13 15.676l-4.645 4.676A.5.5 0 0 1 7.5 20zm1 .5v12.287l4.145-4.172a.5.5 0 0 1 .71 0l4.145 4.172V6.5z" clipRule="evenodd" />
+                            <path d="M4.15 4.878a.514.514 0 0 1 .728-.727l16.971 16.971a.514.514 0 0 1-.727.727z" />
+                            <path fillRule="evenodd" d="M13 24.5c6.351 0 11.5-5.149 11.5-11.5S19.351 1.5 13 1.5S1.5 6.649 1.5 13S6.649 24.5 13 24.5m0 1c6.904 0 12.5-5.596 12.5-12.5S19.904.5 13 .5S.5 6.096.5 13S6.096 25.5 13 25.5" clipRule="evenodd" />
+                        </g>
+                    </svg>
+                    <h4>No bookmarks has been founded.</h4>
+                </div>
             }
         </section>
         </>

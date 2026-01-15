@@ -8,6 +8,7 @@ export * from './MediaModal/EditModal';
 export * from './Profile/ProfileCard';
 export * from './Notification/Notification';
 export * from './Thread/Thread';
+export * from './Thread/ReplyThread';
 export * from './Loading/Spinner';
 export * from './ErrorBox/ErrorBox';
 export * from './BackBar/BackBar';

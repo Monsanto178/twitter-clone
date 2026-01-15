@@ -1,65 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
 import * as fabric from 'fabric';
 
-type MediaEditing = {
-    src: string;
-    idx: number
-}
-
-type ToUpdate = {
-    img: File;
-    idx: number;
-}
-
 type Props = {
     src:string;
-    idx:number;
-    replyingModal: boolean;
-    setCurMediaEditing: (media: MediaEditing | null) => void;
     setIsEditing: (bool:boolean) => void;
-    setUpdateFile: (fileData: ToUpdate) => void
+    setUpdateFile: (fileData: File) => void
 }
 
-export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdateFile, replyingModal}:Props) => {
+export const AvatarEditCard = ({src, setIsEditing, setUpdateFile}:Props) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
     const imageRef = useRef<fabric.FabricImage>(null);
-    const cropRef = useRef<fabric.Rect>(null);
-    const [curEditing, setCurEditing] = useState(false);
-    const [tempMedia, setTempMedia] = useState<MediaEditing>({src: src, idx: idx});
+    const cropRef = useRef<fabric.Circle>(null);
     const [canvasW, setCanvasW] = useState<number>(1200);
     const [canvasH, setCanvasH] = useState<number>(600);
 
-    const [croppedImg, setCroppedImg] = useState<ToUpdate | null>(null);
 
     const closeModal = () => {
         setIsEditing(false);
         
-        if(replyingModal) return;
         document.body.style.overflow = 'auto';
     };
-    const DismissFile = () => setCurMediaEditing(null);
-    const FinishEdit = () => {
-        if(!tempMedia) {
-            DismissFile();
-            closeModal();
-        }
 
+    const FinishEdit = () => {
         closeModal();
-        setCurMediaEditing(tempMedia)
-        if(croppedImg) {
-            setUpdateFile(croppedImg);
-        }
     };
 
 
 
     const createRec = () => {
-        const cropRect = new fabric.Rect({
+        const cropRect = new fabric.Circle({
             left: 100,
             top: 100,
-            width: 200,
-            height: 150,
+            radius: 100,
             fill: 'transparent',
             stroke: 'white',
             strokeWidth: 1,
@@ -70,29 +43,42 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
             angle: 0,
             lockRotation: true,
             lockScalingFlip: true,
-            originX: 'left',
-            originY: 'top',
+            originX: 'center',
+            originY: 'center',
+            minScaleLimit: 0.7,
         });
+        cropRect.on('scaling', () => {
+            if(cropRect.scaleX > 2) {
+                cropRect.set('scaleX', 2);
+            }
+            if(cropRect.scaleY > 2) {
+                cropRect.set('scaleY', 2);
+            }
+        });
+
         cropRect.scaleX = 1;
         cropRect.scaleY = 1;
         cropRect.setControlsVisibility({
             mtr: false,
+            mt:false,
+            mb:false,
+            ml:false,
+            mr:false,
         });
 
         return cropRect;
     }
     
-    const createClipPath = (rect: fabric.Rect, image: fabric.FabricImage) => {
+    const createClipPath = (rect: fabric.Circle, image: fabric.FabricImage) => {
         const updateClipPath = () => {
             if(!fabricCanvasRef.current) return;
-            const clip = new fabric.Rect({
-                width: rect.width! * rect.scaleX!,
-                height: rect.height! * rect.scaleY!,
+            const clip = new fabric.Circle({
+                radius: rect.radius! * rect.scaleX!,
                 left: rect.left,
                 top: rect.top,
                 absolutePositioned: true,
-                originX: 'left',
-                originY: 'top',
+                originX: 'center',
+                originY: 'center',
             });
 
             image.clipPath = clip;
@@ -103,17 +89,15 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
     }
 
     const handleCropImg = async () => {
-        if (!imageRef.current || !fabricCanvasRef.current || !cropRef.current) return;
 
-        const canvas = fabricCanvasRef.current;
+        if (!imageRef.current || !fabricCanvasRef.current || !cropRef.current) return;
+        
         const img = imageRef.current;
         const cropRect = cropRef.current;
-
         const cropBox = {
             left: cropRect.left!,
             top: cropRect.top!,
-            width: cropRect.width! * cropRect.scaleX!,
-            height: cropRect.height! * cropRect.scaleY!
+            radius: cropRect.radius! * cropRect.scaleX!,
         };
 
         const imgLeft = img.left ?? 0;
@@ -124,12 +108,11 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
 
         const relLeft = (cropBox.left - imgLeft) / scaleX;
         const relTop = (cropBox.top - imgTop) / scaleY;
-        const relWidth = cropBox.width / scaleX;
-        const relHeight = cropBox.height / scaleY;
+        const relRadius = cropBox.radius / scaleX;
 
         const croppedCanvas = document.createElement('canvas');
-        croppedCanvas.width = relWidth;
-        croppedCanvas.height = relHeight;
+        croppedCanvas.width = relRadius * 2;
+        croppedCanvas.height = relRadius * 2;
 
         const ctx = croppedCanvas.getContext('2d');
         if (!ctx) return;
@@ -138,50 +121,33 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
         originalImg.crossOrigin = 'anonymous';
         originalImg.src = img.getSrc();
 
+        
         originalImg.onload = () => {
+            const targetWidth = relRadius * 2;
+            const targetHeight = relRadius * 2;
+
             ctx.drawImage(
                 originalImg,
-                relLeft,
-                relTop,
-                relWidth,
-                relHeight,
+                relLeft - relRadius,
+                relTop - relRadius,
+                relRadius * 2,
+                relRadius * 2,
                 0,
                 0,
-                relWidth,
-                relHeight
+                targetWidth,
+                targetHeight
             );
 
             croppedCanvas.toBlob((blob) => {
                 if(blob) {
-                    const file = new File([blob], 'edited_image', {type: 'image/webp'});
+                    const file = new File([blob], 'edited_image', {type: 'image/webp', lastModified: Date.now()});
                     
-                    const fileData: ToUpdate = {
-                        img: file,
-                        idx: idx
-                    };
-
-                    setCroppedImg(fileData);
+                    const fileData: File = file;
+                    
+                    setUpdateFile(fileData);
+                    FinishEdit()
                 }
-            }, 'image/webp', 0.8)
-
-            const croppedDataURL = croppedCanvas.toDataURL('image/png');
-
-            fabric.FabricImage.fromURL(croppedDataURL).then((newImg) => {
-                newImg.set({
-                    left: img.left,
-                    top: img.top,
-                    selectable: false,
-                    hasControls: false,
-                    hasBorders: false,
-                });
-
-                canvas.remove(img);
-                canvas.add(newImg);
-                canvas.renderAll();
-
-                setTempMedia({ src: croppedDataURL, idx: idx });
-                setCurEditing(false);
-            });
+            }, 'image/webp', 0.5)
         };
     }
 
@@ -222,7 +188,7 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
             height: canvasH
         });
         fabricCanvasRef.current = canvas;
-        const srcImg = tempMedia?.src;
+        const srcImg = src;
 
         canvas.renderAll();
 
@@ -240,7 +206,6 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
             } else {
                 scaleFactor = canvas.height! / img.height!;
             }
-            // img.rotate(imgAngle)
             img.scale(scaleFactor);
             img.set({ 
                 left: 0, 
@@ -364,8 +329,6 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
             });
 
             imageRef.current = img;            
-
-            if (curEditing) {
                 const cropRect = createRec();
                 const updateClipPath = createClipPath(cropRect, img);
 
@@ -386,7 +349,6 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
                 });
 
                 const blurredImg = await img.clone();
-                // blurredImg.rotate(imgAngle)
 
                 blurredImg.set({
                     selectable: false,
@@ -408,7 +370,7 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
                 canvas.centerObject(cropRect);
 
                 updateClipPath();
-            }
+            // }
             canvas.add(img);
             canvas.centerObject(img);
         });
@@ -418,28 +380,20 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
             fabricCanvasRef.current?.dispose();
             fabricCanvasRef.current = null;
         };
-    // }, [canvasRef, canvasW, canvasH, src, curEditing, imgAngle])
-    }, [canvasRef, canvasW, canvasH, src, curEditing]);
+    }, [canvasRef, canvasW, canvasH, src]);
     return(
         <>
         <div className="w-screen h-screen fixed inset-0 flex justify-center items-center z-999 bg-black">
             <div className="fixed inset-0 bg-black opacity-85 w-screen h-screen"></div>
             <div onClick={(e) => e.stopPropagation()} className="fixed">
-                <button onClick={() => {closeModal(); DismissFile();}} className="absolute p-2 md:p-4 top-[0.5rem] md:top-[0.25rem] right-[0.25rem] md:right-[0.5rem] rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99">
+                <button onClick={() => {closeModal();}} 
+                    className="absolute p-2 md:p-4 top-[0.5rem] md:top-[0.25rem] right-[0.25rem] md:right-[0.5rem] rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[24px] md:w-[32px] h-[24px] md:h-[32px] lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
                 <canvas className="absolute inset-0 bg-black-500 border border-2" ref={canvasRef} />
                 <div className='absolute p-2 buttom-[0.5rem] md:buttom-[0.25rem] left-[0.25rem] md:left-[0.5rem] flex gap-4 w-full'>
-                    <div className={`${curEditing ? 'block' : 'hidden'} flex justify-evenly w-full`}>
-                        <button onClick={() => {setCurEditing(false)}} className={`${curEditing ? 'block' : 'hidden'} rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99`}>
-                            Cancel
-                        </button>
-                        <button onClick={handleCropImg} className={`rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99`}>
-                            Apply
-                        </button>
-                    </div>
-                    <div className={`${curEditing ? 'hidden' : 'block'} flex justify-evenly w-full`}>
-                        <button onClick={() => {closeModal(); DismissFile();}} className="p-2 rounded-[50%] transition-all duration-300 ease-in-out hover:bg-red-500 cursor-pointer z-99">
+                    <div className={`flex justify-evenly w-full`}>
+                        <button onClick={() => {closeModal()}} className="p-2 rounded-[50%] transition-all duration-300 ease-in-out hover:bg-red-500 cursor-pointer z-99">
                             <svg xmlns="http://www.w3.org/2000/svg"
                                 width="24" 
                                 height="24" 
@@ -454,22 +408,7 @@ export const EditModal = ({src, idx, setCurMediaEditing, setIsEditing, setUpdate
                                     <path d="m6 6 12 12"/>
                             </svg>
                         </button>
-                        <button onClick={() => {setCurEditing(true)}} className={`p-2 rounded-[50%] transition-all duration-300 ease-in-out hover:bg-[#87878770] cursor-pointer z-99`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" 
-                                width="24" 
-                                height="24" 
-                                viewBox="0 0 24 24" 
-                                fill="none" 
-                                stroke="#ffffff" 
-                                strokeWidth="2" 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                className="lucide lucide-crop-icon lucide-crop">
-                                    <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
-                                    <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
-                            </svg>
-                        </button>
-                        <button onClick={FinishEdit} className="p-2 rounded-[50%] transition-all duration-300 ease-in-out hover:bg-green-400 cursor-pointer z-99">
+                        <button onClick={handleCropImg} className="p-2 rounded-[50%] transition-all duration-300 ease-in-out hover:bg-green-400 cursor-pointer z-99">
                             <svg xmlns="http://www.w3.org/2000/svg" 
                                 width="24" 
                                 height="24" 

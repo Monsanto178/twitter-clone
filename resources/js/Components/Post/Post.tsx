@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { ProfileToolTip, MediaModal, CommentModal, DisplayMedia } from "../index";
-import {PostType} from "../../Types";
-import defaultAvatar from "../../../assets/user_avatar_default.png";
+import { ProfileToolTip, MediaModal, CommentModal, DisplayMedia } from "@/Components";
+import {PostType} from "@/Types";
+import defaultAvatar from "@assets/user_avatar_default.png";
 import NumberFlow from "@number-flow/react";
-import { fetchData } from "../../Utils";
+import { fetchData } from "@/Utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { router } from '@inertiajs/react';
 // import { es } from 'date-fns/locale';
@@ -11,14 +11,23 @@ import { router } from '@inertiajs/react';
 interface Props {
     post: PostType;
     selected: boolean;
+    showReply?: boolean;
 }
 
-export const Post = ({post, selected = false}:Props) => {
+type ReplyTo = {
+    username: string;
+    profileId: number;
+}
+
+export const Post = ({post, selected = false, showReply = false}:Props) => {
     const [profileHover, setProfileHover] = useState(false);
     const [showToolTip, setShowToolTip] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isMCommentOpen, setIsMCommentOpen] = useState(false);
     const [curMediaFocus, setCurMediaFocus] = useState(0);
+
+    const reply = post.parent_post_id ? true : false;
+    const [replyTo, setReplyTo] = useState<ReplyTo | null>(null);
 
     const [isLiked, setIsLiked] = useState(post.liked_by_cur_profile);
     const [isAnimateLike, setIsAnimateLike] = useState(false);
@@ -32,7 +41,6 @@ export const Post = ({post, selected = false}:Props) => {
     const [isAnimateShare, setIsAnimateShare] = useState(false);
 
     const [isAnimateReply, setIsAnimateReply] = useState(false);
-
 
     const handleMediaClick = (idx:number) => {
         setCurMediaFocus(idx);
@@ -56,6 +64,18 @@ export const Post = ({post, selected = false}:Props) => {
             });
 
             return createdAt;
+        }
+    }
+
+    async function fetchUsername(postId:number) {
+        const formData = new FormData();
+        formData.append('postId', postId.toString())
+        try {
+            const response = await fetchData<ReplyTo>('/api/profile/getUsername', 'POST', formData);
+            
+            setReplyTo(response);
+        } catch (e) {
+            console.error(e);
         }
     }
 
@@ -171,6 +191,13 @@ export const Post = ({post, selected = false}:Props) => {
         return () => clearTimeout(timer);
     }, [profileHover]);
 
+    useEffect(() => {
+        if(!reply) return;
+        if(!showReply) return;
+
+        fetchUsername(post.parent_post_id);
+    }, [])
+
     const userData = post.user_profile;
 
     return(
@@ -240,10 +267,21 @@ export const Post = ({post, selected = false}:Props) => {
                         <strong>{userData.name}</strong>
                     </a>
                     <a href={`/profile/${userData.id}`}>
-                        <span className="text-[#a2a2a2ff]">{userData.username}</span>
+                        <span className="text-[#a2a2a2ff]">@{userData.username}</span>
                     </a>
                     <span className="text-[#a2a2a2ff]">{parseDate(post.created_at, true)}</span>
                 </div>
+                }
+
+                {reply && showReply &&
+                    <div className="flex gap-x-2">
+                        <span className="text-gray-400">Reply to</span>
+                        <a href={`/profile/${replyTo?.profileId}`} 
+                            onClick={(e) => {e.stopPropagation()}} 
+                            className="text-blue-700 cursor-pointer transition-scale duration-300 ease-in-out hover:scale-105">
+                                @{replyTo?.username}
+                        </a>
+                    </div>
                 }
 
                 {post.post_text && 
@@ -253,7 +291,7 @@ export const Post = ({post, selected = false}:Props) => {
                 }
 
                 {post.media && 
-                <div onClick={(e) => {e.stopPropagation()}} className={`overflow-hidden items-strech rounded-[20px] justify-between gap-1 flex`}>
+                <div onClick={(e) => {e.stopPropagation()}} className={`overflow-hidden items-strech rounded-[20px] justify-between gap-1 flex max-h-[15rem] sm:max-h-full ${post.media.length === 3 ? '' : 'flex-wrap'}`}>
                     < DisplayMedia 
                         mediaArr={post.media}
                         handleClick={handleMediaClick}

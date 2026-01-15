@@ -6,18 +6,18 @@ interface Props {
     reply: PostType;
 }
 
-export const Thread = ({post, reply}: Props) => {
+export const ReplyThread = ({post, reply}: Props) => {
     return (
         <>
         <div className='relative flex flex-col items-start w-full'>
-            <div className='absolute left-10 top-12 bottom-27 sm:bottom-27 md:bottom-29 w-[1.5px] bg-gray-400'></div>
+            <div className='absolute left-10 top-12 bottom-55 sm:bottom-55 md:bottom-55 w-[1.5px] bg-gray-400'></div>
 
             <div className='relative w-full'>
                 <Post post={post} selected={false} showReply={true}/>
             </div>
 
-            <div className='relative mt-4 w-full'>
-                <Post post={reply} selected={false}/>
+            <div className='relative mt-4 ml-3 w-full'>
+                <Post post={reply} selected={true} showReply={true}/>
             </div>
         </div>
         </>

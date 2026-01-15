@@ -1,10 +1,9 @@
 import { Post, ProfileCard, Thread, Spinner, ProfileBackBar, ShowMoreBtn} from "../Components";
 import React, { useEffect, useState } from "react";
-import { PostType } from "../Types";
-import { fetchData } from "../Utils";
-import { useUserProfile } from '../Context/ProfileContext';
-import { useErrorContext } from "../Context/ErrorContext";
-// import bannerDefault from "../../assets/content.jpg";
+import { PostType } from "@/Types";
+import { fetchData } from "@/Utils";
+import { useUserProfile } from '@/Context/ProfileContext';
+import { useErrorContext } from "@/Context/ErrorContext";
 
 type Props = {
     profileId: string;
@@ -46,6 +45,7 @@ export default function Profile({profileId}:Props) {
     const [loadMoreReplies, setLoadMoreReplies] = useState(false);
     const [loadMoreMedia, setLoadMoreMedia] = useState(false);
     const [loadMoreLikes, setLoadMoreLikes] = useState(false);
+    
 
     const {setErrorState} = useErrorContext();
 
@@ -64,7 +64,7 @@ export default function Profile({profileId}:Props) {
 
         try {
             if(posts) setLoadMorePosts(true);
-            const postsData = await fetchData<PaginatedPosts>('/profile/getPosts', "POST", formData);
+            const postsData = await fetchData<PaginatedPosts>('/api/profile/getPosts', "POST", formData);
             
             if(posts) {
                 const sumArray = posts.concat(postsData.posts);
@@ -92,7 +92,7 @@ export default function Profile({profileId}:Props) {
         }
         try {
             if(replies) setLoadMoreReplies(true);
-            const repliesData = await fetchData<PaginatedPosts>('/profile/getReplies', "POST", formData);
+            const repliesData = await fetchData<PaginatedPosts>('/api/profile/getReplies', "POST", formData);
 
             if(replies) {
                 const sumArray = replies.concat(repliesData.posts);
@@ -117,7 +117,7 @@ export default function Profile({profileId}:Props) {
 
         try {
             if(media) setLoadMoreMedia(true);
-            const mediaData = await fetchData<PaginatedPosts>('/profile/getMedia', "POST", formData);
+            const mediaData = await fetchData<PaginatedPosts>('/api/profile/getMedia', "POST", formData);
 
             if(media) {
                 const sumArray = media.concat(mediaData.posts);
@@ -142,7 +142,7 @@ export default function Profile({profileId}:Props) {
 
         try {
             if(likes) setLoadMoreLikes(true);
-            const likesData = await fetchData<PaginatedPosts>('/profile/getLikes', "POST", formData);
+            const likesData = await fetchData<PaginatedPosts>('/api/profile/getLikes', "POST", formData);
 
             if(likes) {
                 const sumArray = likes.concat(likesData.posts);
@@ -175,6 +175,7 @@ export default function Profile({profileId}:Props) {
 
     const followBtn = async() => {
         if(!fullProfile) return;
+
         setIsFollowingLoading(true);
         followProfile(fullProfile)
         .finally(() => {
@@ -229,7 +230,8 @@ export default function Profile({profileId}:Props) {
             <>
             
             <ProfileBackBar fullProfile={fullProfile} isFollowLoading={isFollowLoading} paginated={paginated} followBtn={followBtn}/>
-            <ProfileCard user={fullProfile.profile}/>
+            <ProfileCard user={fullProfile.profile} own_prof={fullProfile.own_profile} id={profileId}/>
+
 
             <section className="mx-0 sm:mx-4 relative">
                 <div className="flex justify-between text-[16px] sm:text-[18px]">
@@ -311,7 +313,6 @@ export default function Profile({profileId}:Props) {
                     }
                     {replies && !repliesLoading && pagReplies?.current_page && pagReplies?.current_page !== pagReplies?.last_page && 
                         <ShowMoreBtn fetchAction={fetchReplies} page={(pagReplies.current_page+1).toString()} loadFlag={loadMoreReplies}/>
-
                     }
 
                     {!repliesLoading && replies?.length === 0 &&

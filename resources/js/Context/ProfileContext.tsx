@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { FullUserType } from '../Types';
-import { loadProfileFromCache, saveProfileToCache, follow, fetchData} from '../Utils';
+import { FullUserType } from '@/Types';
+import { loadProfileFromCache, saveProfileToCache, follow, fetchData} from '@/Utils';
+import { usePage } from '@inertiajs/react';
 
 
 interface ProfileContextType {
@@ -24,6 +25,8 @@ export const ProfileProvider = ({ children } : ProviderProps) => {
   const [fullProfile, setProfile] = useState<FullUserType | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [followError, setFollowError] = useState<string | null>(null);
+  const curProfileId = (usePage().props.auth_user as {id: string}).id;
+
 
   // const loadProfile = async (profileId: string): Promise<void> => {
   //   const cachedProfile = loadProfileFromCache(profileId);
@@ -81,7 +84,7 @@ export const ProfileProvider = ({ children } : ProviderProps) => {
 
   const followProfile = async (profile: FullUserType) => {
     try {
-      const updatedProfile = await follow(profile);
+      const updatedProfile = await follow(profile, curProfileId.toString());
       if (updatedProfile) {
         updateProfile(updatedProfile);
         loadProfile(profile.profile.id.toString())

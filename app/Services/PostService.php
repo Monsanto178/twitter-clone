@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Models\Post;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -17,9 +17,7 @@ class PostService
         //
     }
 
-    private function handleErrors(ValidationException | Exception $e, int $code = 500, string $message) {
-        Log::info('Error', ['error' => $e]);
-
+    private function handleErrors(ValidationException | Exception $e, int $code = 500, string $message): array {
         return [
             'status' => 'error',
             'code' => $code,
@@ -27,13 +25,21 @@ class PostService
             'error' => $e->getMessage()
         ];
     }
-    private function handleResponse(string $message, int $code = 200, \Illuminate\Pagination\LengthAwarePaginator|array|null $data = null) {
+    private function handleResponse(string $message, int $code = 200, \Illuminate\Pagination\LengthAwarePaginator|array|null|Post $data = null): array {
         return [
             'status' => 'success',
             'code' => $code,
             'message' => $message,
             'data' => $data
         ];
+    }
+
+    private function addAttributes($posts) {
+        foreach ($posts as $post) {
+            $post->append('liked_by_cur_profile');
+            $post->append('reposted_by_cur_profile');
+            $post->append('bookmarked_by_cur_profile');
+        }
     }
 
     /**
@@ -44,8 +50,11 @@ class PostService
      */
 
     public function createPost(array $data): array {
+        $textValidation = 'required|string|max:280';
+        if(!empty($data['files'])) $textValidation = 'nullable|string|max:280';
+
         $validation = Validator::make($data, [
-            'text' => 'required|string|max:280',
+            'text' => $textValidation,
             'profile_id' => 'required|exists:user_profiles,id',
             'original_post_id' => 'nullable|exists:posts,id',
             'parent' => 'nullable|exists:posts,id'
@@ -100,14 +109,33 @@ class PostService
             ->withCount([
                 'likedBy as likes', 
                 'replies as replies', 
-                'repost as reposts',
-                'userProfile.followers as followers',
-                'userProfile.following as following'
+                'repostedBy as reposts',
                 ])
             ->latest()
             ->paginate(10);
 
-            return $this->handleResponse('Post retrieved successfully', 200, $posts);
+            $this->addAttributes($posts);
+
+            $parentPostIds = $posts->pluck('parent_post_id')->unique();
+
+            $parents = Post::with(['userProfile:id,name,username,avatar', 'media'])
+            ->withCount([
+                'likedBy as likes', 
+                'replies as replies', 
+                'repostedBy as reposts',
+                ])
+            ->whereIn('id', $parentPostIds)
+            ->get();
+
+            if($parents->isEmpty()) return $this->handleResponse('Posts retrieved successfully', 200, $posts);
+            
+            $this->addAttributes($parents);
+
+            foreach ($posts as $post) {
+                $post->originalPost = $parents->firstWhere('id', $post->parent_post_id);
+            }
+
+            return $this->handleResponse('Posts retrieved successfully', 200, $posts);
         } catch (\Exception $e) {
 
             return $this->handleErrors($e, 500, 'Internal server error');
@@ -265,12 +293,12 @@ class PostService
 
             $post = Post::findOrFail($postId);
             if($profile->hasReposted($post)) {
-                $profile->posts()->detach($post);
+                $profile->reposts()->detach($post);
 
                 return $this->handleResponse('Repost removed', 200);
             }
 
-            $profile->bookmarks()->attach($post);
+            $profile->reposts()->attach($post);
 
             return $this->handleResponse('Successfully reposted', 200);
         } catch (ValidationException $e) {

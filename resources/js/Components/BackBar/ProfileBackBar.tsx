@@ -1,5 +1,5 @@
 import NumberFlow from "@number-flow/react"
-import { FullUserType } from '../../Types/FullUserType'
+import { FullUserType } from '@/Types/FullUserType'
 
 type PaginatedStats = {
     current_page: number,
@@ -54,7 +54,7 @@ export const ProfileBackBar = ({fullProfile, paginated, isFollowLoading, followB
                     className="flex w-20 h-12 items-center justify-center p-1 bg-[#BE3144] transition-all duration-300 
                         hover:bg-[#872341] rounded-[20px] cursor-pointer
                         disabled:cursor-wait disabled:bg-[#d97a8d] disabled:opacity-50">
-                    <strong>{fullProfile.isFollowing ? 'Unfollow' : 'Follow'}</strong>
+                    <strong>{fullProfile.isFollowed ? 'Unfollow' : 'Follow'}</strong>
                 </button>
             </article>
             }

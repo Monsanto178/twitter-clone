@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { CommentBox } from "../CommentBox/CommentBox";
-import defaultAvatar from "../../../assets/user_avatar_default.png";
-import { fetchData } from "../../Utils";
+import { CommentBox } from "@/Components";
+import defaultAvatar from "@assets/user_avatar_default.png";
+import { fetchData } from "@/Utils";
 
 interface Props {
     target?: {
@@ -12,8 +12,13 @@ interface Props {
     replying:boolean;
 }
 type Response = {
-    profilePic: string;
+    status: 'success' | 'error';
+    code: number;
+    message: string;
+    error?: string;
+    data?: {avatar: string};
 }
+
 
 export const CommentModal = ({target = null, replying = false, setIsMcommentOpen}: Props) => {
     const [profilePic, setProfilePic] = useState<string | null>(null)
@@ -22,7 +27,7 @@ export const CommentModal = ({target = null, replying = false, setIsMcommentOpen
         try {
             const response = await fetchData<Response>('/getProfilePic', 'GET');
 
-            setProfilePic(response.profilePic);
+            if(response.data) setProfilePic(response.data.avatar);
         } catch (e) {
             console.error(e);
         }

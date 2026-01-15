@@ -12,6 +12,7 @@ export type PostType = {
     reposted_by_cur_profile: boolean;
     bookmarked_by_cur_profile: boolean;
     originalPost?: PostType;
+    parent_post_id: number;
     media: Array<MediaType> | null,
     user_profile: ReducedUserType
     type?:string;

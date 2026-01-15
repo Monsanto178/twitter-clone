@@ -1,5 +1,11 @@
-import { FullUserType } from "../Types";
+import { FullUserType } from "@/Types";
 
+const TIME_EXPIRATION = 60 * 60 * 1000;
 export const saveProfileToCache = (profileBox: FullUserType) => {
-    sessionStorage.setItem(`profile_${profileBox.profile.id}`, JSON.stringify(profileBox));
+    const now = new Date().getTime();
+    const toStore = {
+        profile: profileBox,
+        expiry: now + TIME_EXPIRATION
+    }
+    localStorage.setItem(`profile_${profileBox.profile.id}`, JSON.stringify(toStore));
 };

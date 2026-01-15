@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { EditModal } from "../MediaModal/EditModal";
+import { EditModal, DisplayMedia} from "@/Components";
 import React from "react";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
-import { fetchData } from "../../Utils";
-import defaultAvatar from "../../../assets/user_avatar_default.png";
-import { useReplyContext } from "../../Context/ReplyContext";
-import { DisplayMedia } from "../../Components/Media/DisplayMedia";
+import { fetchData } from "@/Utils";
+import defaultAvatar from "@assets/user_avatar_default.png";
+import { useReplyContext } from "@/Context/ReplyContext";
 
 type Emoji = {
   id: string;
@@ -69,17 +68,6 @@ export const CommentBox = ({modalOpen, cover_img, replying=false, replyTo=null}:
         setIsEditing(true);
         document.body.style.overflow = 'hidden';
     }
-    
-    // const classifyMedia = (media:Preview):ReactNode => {
-    //     if (!media) return;
-
-    //     if(media.mimeType.startsWith('video/')) {
-    //         return <video src={media.src} controls className="w-full h-full object-cover transition-all duration-300 ease-in-out hover:scale-110"></video>
-    //     }
-    //     if(media.mimeType.startsWith('image/')) {
-    //         return <img src={media.src} alt="media_content" className="w-full h-full object-cover transition-all duration-300 ease-in-out hover:scale-110"/>
-    //     }
-    // }
 
     const clearInputs = () => {
         if(!isSended) return;
@@ -121,70 +109,6 @@ export const CommentBox = ({modalOpen, cover_img, replying=false, replyTo=null}:
 
         inputFileRef.current.files = dataTransfer.files;
     }
-
-    // const displayMedia = (mediaArr:Array<Preview>) => {
-    //     if(mediaArr.length<1) return;
-    //     if(mediaArr.length%2 === 0) {
-    //         return (
-    //             <>
-    //             {mediaArr.map((el, idx) => {
-    //                 return (
-    //                     <picture key={idx} className={`relative overflow-hidden bg-black w-[49%] ${mediaArr.length === 2 ? 'h-[25rem]' : 'h-[12.5rem]'} flex items-center gap-1`}>
-    //                         {classifyMedia(el)}
-    //                         <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-99">
-    //                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    //                         </button>
-    //                         {el.mimeType.startsWith('image') && 
-    //                             <button onClick={() => {handleEditFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-99">
-    //                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-    //                             </button>
-    //                         }
-    //                     </picture>
-    //                 )
-    //             })}
-    //             </>
-    //         )
-    //     } else {
-    //         return(
-    //             <>
-    //             <div className={`flex items-center bg-black overflow-hidden ${mediaArr.length === 3 ? 'w-[60%] h-[25rem]' : replying ? 'w-full h-[27rem]' : 'w-full h-full'}`}>
-    //                 <picture className="relative w-full h-full">
-    //                     {classifyMedia(mediaArr[0])}
-    //                     <button onClick={() => {deleteFile(0)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
-    //                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    //                     </button>
-    //                         {mediaArr[0].mimeType.startsWith('image') && 
-    //                             <button onClick={() => {handleEditFile(0)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
-    //                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-    //                             </button>
-    //                         }
-    //                 </picture>
-    //             </div>
-    //             {mediaArr.length>1 &&
-    //                 <div className="flex flex-col w-[39%] gap-1">
-    //                 {mediaArr.map((el, idx) => {
-    //                     if (idx !== 0) {
-    //                         return (
-    //                             <picture key={idx} className={`relative overflow-hidden bg-black h-[12.5rem] flex items-center gap-1`}>
-    //                                 {classifyMedia(el)}
-    //                                 <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
-    //                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    //                                 </button>    
-    //                                 {el.mimeType.startsWith('image') && 
-    //                                     <button onClick={() => {handleEditFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] left-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
-    //                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-    //                                     </button>
-    //                                 }
-    //                             </picture>
-    //                         )
-    //                     }
-    //                 })}
-    //                 </div>
-    //             }
-    //             </>
-    //         )
-    //     }
-    // }
 
     const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         if(event.target.value.length>300) return;
@@ -234,8 +158,6 @@ export const CommentBox = ({modalOpen, cover_img, replying=false, replyTo=null}:
         }
 
         if(files) {
-            console.log(files);
-            
             for (let i = 0; i < files.length; i++) {
                 formData.append('files[]', files[i])
             }
@@ -388,15 +310,21 @@ export const CommentBox = ({modalOpen, cover_img, replying=false, replyTo=null}:
         </div>
         <article className={`transition-all duration-500 ease-in-out ${isEditing ? 'opacity-100 z-9999' : 'opacity-0'}`}>
             {isEditing && urlPreview && curMediaEditing &&
-                <EditModal src={curMediaEditing.src} idx={curMediaEditing.idx} setCurMediaEditing={setCurMediaEditing} setIsEditing={setIsEditing} replyingModal={replying} setUpdateFile={setUpdateFile}/>
+                <EditModal 
+                    src={curMediaEditing.src} 
+                    idx={curMediaEditing.idx} 
+                    setCurMediaEditing={setCurMediaEditing} 
+                    setIsEditing={setIsEditing} 
+                    replyingModal={replying} 
+                    setUpdateFile={setUpdateFile}/>
             }
         </article>
         <article className={`transition-all duration-500 ease-in-out ${sendModal ? 'opacity-100 z-9999' : 'opacity-0'}`}>
             {sendModal &&
             <div className="w-screen h-screen fixed inset-0 flex justify-center items-center z-999 bg-[#000000cc]">
                 <div className="top-1/2 left-1/2 z-9999 p-8 min-w-[300px] max-h-[200px] bg-[#00224D] flex flex-col justify-between items-center gap-y-4 rounded-[10px]">
-                    <div>
-                        <span>{`${isSended ? '¡Post has been created successfully!' : 'Oops...Something went wrong'}`}</span>
+                    <div className="p-4">
+                        <span>{`${isSended ? 'Post has been created successfully!' : 'Oops... Something went wrong'}`}</span>
                     </div>
                     <button
                         onClick={() => {
@@ -406,9 +334,10 @@ export const CommentBox = ({modalOpen, cover_img, replying=false, replyTo=null}:
                                 modalOpen(false)
                                 setReloadReply(true);
                             };
+                            document.body.style.overflow = 'auto';
                             clearInputs();
                         }}
-                        className="p-2 transition-all duration-300 ease-in-out rounded-[15px] hover:bg-white hover:text-black hover:font-[600] cursor-pointer">
+                        className="w-30 h-12 flex items-center justify-center bg-[#BE3144] transition-all duration-300 ease-in-out hover:bg-[#872341] cursor-pointer rounded-[25px] overflow-hidden">
                             Accept
                     </button>
                 </div>

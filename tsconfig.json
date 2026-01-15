@@ -9,7 +9,11 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "baseUrl": "./resources/js",
-    "lib": ["esnext", "dom"]
+    "lib": ["esnext", "dom"],
+    "paths": {
+      "@/*": ["*"],
+      "@assets/*": ["../assets/*"]
+    }
   },
   "include": ["resources/js/**/*"]
 }

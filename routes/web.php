@@ -1,12 +1,13 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
-use App\Models\UserProfile;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return inertia('Login');
+})->middleware('guest');
 
 Route::get('/login', function () {
     return inertia('Login');
@@ -17,12 +18,11 @@ Route::post('/login',[AuthController::class, 'login'])->middleware('throttle:100
 
 Route::middleware('auth')->group(function () {
     Route::get('/home', function () {
-        Log::info('Groove Streets, Home.');
         return inertia('Home');
     });
 
     Route::get('/post/{postId}', function ($postId) {
-        return inertia('Profile', ['postId' => $postId]);
+        return inertia('PostPage', ['postId' => $postId]);
     });
 
     Route::get('/profile', function () {

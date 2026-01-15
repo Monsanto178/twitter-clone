@@ -1,5 +1,5 @@
 import { Link, usePage } from "@inertiajs/react";
-import { CommentModal } from "../../Components/CommentModal/CommentModal";
+import { CommentModal } from "@/Components/CommentModal/CommentModal";
 import { useState } from "react";
 
 type Props = {

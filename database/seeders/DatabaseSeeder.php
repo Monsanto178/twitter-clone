@@ -15,12 +15,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        // User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
 
         $user = User::create([
             'name' => 'Juan Rodriguez',
@@ -53,7 +47,6 @@ class DatabaseSeeder extends Seeder
             'user_id' => $user1->id,
         ]);
 
-        // Crear segundo usuario
         $user2 = User::create([
             'name' => 'Carlos Sánchez',
             'email' => 'carlos@example.com',
@@ -69,7 +62,6 @@ class DatabaseSeeder extends Seeder
             'user_id' => $user2->id,
         ]);
 
-        // Crear tercer usuario
         $user3 = User::create([
             'name' => 'Lucía García',
             'email' => 'lucia@example.com',

@@ -11,6 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class MediaService
@@ -32,24 +34,19 @@ class MediaService
      * @throws Exception
      */
     public function createMedia($files, $post) {
+        if (count($files) > 4) {
+            throw new ValidationException('You can only upload a maximum of 4 files.');
+        }
+        
+        $validation = Validator::make([$files], 
+            ['files.*' => 'file|mimes:jpg,jpeg,png,webp,gif,mp4,mkv,avi|max:20000']
+        );
 
+        if ($validation->fails()) {
+            Log::info('Validation failed');
+            throw new ValidationException('File validation failed');
+        }
         foreach ($files as $file) {
-            if (!$file instanceof \Illuminate\Http\UploadedFile) {
-                throw new ValidationException('The file is not valid.');
-            }
-
-            if (!in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mkv', 'avi'])) {
-                throw new ValidationException('The file type is not supported.');
-            }
-
-            if ($file->getSize() > 10000000) {
-                throw new ValidationException('The file exceeds the maximum allowed size (30 MB).');
-            }
-
-            if (count($files) > 4) {
-                throw new ValidationException('You can only upload a maximum of 4 files.');
-            }
-
             try {
                 //Cloudinary case
 
@@ -80,7 +77,7 @@ class MediaService
 
 
                 //Storage case
-                $filePath = $file->store('posts', 'public');
+                $filePath = Storage::url($file->store('posts', 'public'));
                 $mimeType = $file->getMimeType();
                 $order = array_search($file, $files);
 

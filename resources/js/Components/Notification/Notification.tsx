@@ -1,31 +1,15 @@
-import { Post } from "Components/Post/Post";
+// import { Post } from "@/Components";
+import { UserType, PostType } from "@/Types"
+import defaultAvatar from '@assets/user_avatar_default.png';
 import React from "react";
 
-type Media = {
-    data: string | null;
-    mimeType: string;
-}
-
-type User = {
-    cover_img: string;
-    user_name: string;
-    user_alias: string;
-}
-
-type Post = User & {
-    time_posted: string;
-    post_text: string | null;
-    comments: number;
-    reposted: number;
-    likes: number;
-    media: Array<Media> | null
-}
+//Not Implemented
 
 type Notification = {
     type: 'Like' | 'Repost';
-    users: Array<User>;
+    users: Array<UserType>;
     quantity: number;
-    post: Post
+    post: PostType
 }
 
 type Props = {
@@ -33,8 +17,8 @@ type Props = {
 }
 
 export const Notification = ({notification}:Props) => {
-    const first_user = notification.users[0].user_name;
-    const second_user = notification.users[1] ? notification.users[1].user_name : null;
+    const first_user = notification.users[0].name;
+    const second_user = notification.users[1] ? notification.users[1].name : null;
     const users_lenght = notification.users.length;
 
     return (
@@ -56,7 +40,7 @@ export const Notification = ({notification}:Props) => {
                         return(
                             <React.Fragment key={idx}>
                                 <picture className="w-[30px] h-[30px] md:h-[40px] md:w-[40px] rounded-[50%] overflow-hidden group">
-                                    <img src={el.cover_img} alt="cover_img" className="w-full h-full" draggable={false}/>
+                                    <img src={el.avatar ? el.avatar : defaultAvatar} alt="cover_img" className="w-full h-full" draggable={false}/>
                                 </picture>
                             </React.Fragment>
                         )

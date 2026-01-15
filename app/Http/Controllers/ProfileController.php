@@ -12,7 +12,7 @@ class ProfileController extends Controller
 
     public function __construct(ProfileService $profileService)
     {
-        $this->$profileService = $profileService;
+        $this->profileService = $profileService;
     }
 
     function getProfile(Request $request) {
@@ -31,10 +31,27 @@ class ProfileController extends Controller
         return response()->json($profile['data'], 200);
     }
 
+    function getUsername(Request $request) {
+        $postId = $request->input('postId');
+        $postId = intval($postId);
+
+        $data = $this->profileService->getUsername($postId);
+
+        if($data['status'] === 'error') {
+            return response()->json([
+                'status' => 'error',
+                'message' => $data['message'],
+                'error' => $data['error']
+            ], $data['code']);
+        }
+
+        return response()->json($data['data'], 200);
+    }
+
     function follow(Request $request) {
         $profileId = $request->id;
         
-        $profile = $this->profileService->getProfile($profileId);
+        $profile = $this->profileService->followProfile($profileId);
 
         if($profile['status'] === 'error') {
             return response()->json([
@@ -43,8 +60,10 @@ class ProfileController extends Controller
                 'error' => $profile['error']
             ], $profile['code']);
         }
-
-        return response()->json(['Success'], 200);
+        if($profile['message'] === 'Unfollow') {
+            return response()->json( false, 200);
+        }
+        return response()->json(true, 200);
     }
 
     function getProfilePosts(Request $request) {
@@ -114,7 +133,7 @@ class ProfileController extends Controller
     function getProfileBookMark() {
         $profileId = Auth::user()->profile->id;
         
-        $bookmarks = $this->profileService->profilePosts($profileId);
+        $bookmarks = $this->profileService->profileBookMark($profileId);
 
         if($bookmarks['status'] === 'error') {
             return response()->json([
@@ -128,9 +147,7 @@ class ProfileController extends Controller
     }
     
     function getTestProfiles() {
-        $profileId = Auth::user()->profile->id;
-        
-        $testProf = $this->profileService->testProfiles($profileId);
+        $testProf = $this->profileService->testProfiles();
 
         if($testProf['status'] === 'error') {
             return response()->json([
@@ -156,8 +173,26 @@ class ProfileController extends Controller
             ], $profPic['code']);
         }
 
+        return response()->json($profPic);
+    }
+
+    function update(Request $request) {
+        $data = $request->only(['name', 'bio']);
+
+        $avatar = $request->file('avatar');
+        $banner = $request->file('banner');
+
+        $profileUpdate = $this->profileService->profileUpdate($data, $avatar, $banner);
+        if($profileUpdate['status'] === 'error') {
+            return response()->json([
+                'status' => 'error',
+                'message' => $profileUpdate['message'],
+                'error' => $profileUpdate['error']
+            ], $profileUpdate['code']);
+        }
+
         return response()->json([
-            'profilePic' => $profPic
+            'status' => 'Profile updated'
         ]);
     }
 }

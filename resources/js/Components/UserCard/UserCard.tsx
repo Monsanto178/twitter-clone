@@ -1,6 +1,6 @@
-import { ReducedUserType } from '../../Types';
-import defaultAvatar from "../../../assets/user_avatar_default.png";
-import { fetchData } from '../../Utils';
+import { ReducedUserType } from '@/Types';
+import defaultAvatar from "@assets/user_avatar_default.png";
+import { fetchData } from '@/Utils';
 import { router } from '@inertiajs/react';
 
 interface Props {

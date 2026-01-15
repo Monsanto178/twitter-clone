@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class Post extends Model
 {
@@ -54,21 +54,17 @@ class Post extends Model
     }
 
     public function getLikedByCurProfileAttribute():bool {
-        // $userProfile = auth()->user()->profile;
-        $user = 1;
-        $profile = User::findOrFail($user)->profile;
+        $profile = Auth::user()->profile;
 
         return $profile ? $profile->hasLikedPost($this) : false;
     }
     public function getRepostedByCurProfileAttribute():bool {
-        $user = 1;
-        $profile = User::findOrFail($user)->profile;
+        $profile = Auth::user()->profile;
 
         return $profile ? $profile->hasReposted($this) : false;
     }
     public function getBookmarkedByCurProfileAttribute():bool {
-        $user = 1;
-        $profile = User::findOrFail($user)->profile;
+        $profile = Auth::user()->profile;
 
         return $profile ? $profile->hasBookmark($this) : false;
     }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useErrorContext } from "../../Context/ErrorContext"
+import { useErrorContext } from "@/Context/ErrorContext"
 
 export const ErrorBox = () => {
     const {error, clearError} = useErrorContext();

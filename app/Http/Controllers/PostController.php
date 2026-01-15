@@ -48,6 +48,7 @@ class PostController extends Controller
         }
 
         return response()->json($indexPosts['data'], 200);
+
     }
 
     function getPost(Request $request) {
@@ -82,20 +83,6 @@ class PostController extends Controller
         return response()->json($replies['data']['replies'], 200);
     }
 
-    // function quote($postId) {
-    //     try {
-    //         $post = Post::with(['userProfile:id,name,username,avatar', 'media'])->findOrFail($postId);
-        
-    //         return response()->json($post);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Internal server error',
-    //             'error' => $e
-    //         ], 500);
-    //     }
-    // }
-
     function like(Request $request) {
         $postId = $request->input('postId');
         
@@ -115,7 +102,7 @@ class PostController extends Controller
     function bookmark(Request $request) {
         $postId = $request->input('postId');
         
-        $replies = $this->postService->likePost($postId);
+        $replies = $this->postService->bookmarkPost($postId);
 
         if($replies['status'] === 'error') {
             return response()->json([

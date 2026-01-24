@@ -30,9 +30,9 @@ export const AvatarEditCard = ({src, setIsEditing, setUpdateFile}:Props) => {
 
     const createRec = () => {
         const cropRect = new fabric.Circle({
-            left: 100,
-            top: 100,
-            radius: 100,
+            left: 150,
+            top: 150,
+            radius: 150,
             fill: 'transparent',
             stroke: 'white',
             strokeWidth: 1,

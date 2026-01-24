@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\Media;
+use App\Models\Post;
 use App\Models\User;
 use App\Models\UserProfile;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,66 +15,62 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $avatars = [];
 
-        $user = User::create([
-            'name' => 'Juan Rodriguez',
-            'email' => 'juanrodri@example.com',
-            'password' => Hash::make('password123'),
-        ]);
+        for ($i=1; $i < 20; $i++) {
+            $avatars[] = "/images/avatars/avatar_" . str_pad($i, 2, "0", STR_PAD_LEFT) . ".webp" ;
+        }
 
-        UserProfile::create([
-            'name' => 'Juan Pérez',
-            'username' => 'juanp',
-            'avatar' => null,
-            'banner' => null,
-            'bio' => 'Desarrollador de Laravel y PHP',
-            'user_id' => $user->id,
-        ]);
-        
+        User::factory(5)->create()->each(function ($user) use ($avatars) {
+            $avatar = $avatars[array_rand($avatars)];
+            $profile= UserProfile::factory()->create([
+                'user_id' => $user->id,
+                'avatar' => $avatar
+            ]);
 
-        $user1 = User::create([
-            'name' => 'Ana López',
-            'email' => 'ana@example.com',
-            'password' => Hash::make('password123'),
-        ]);
+            $posts = Post::factory(4)->create([
+                'user_profile_id' => $profile->id
+            ]);
 
-        UserProfile::create([
-            'name' => 'Ana López',
-            'username' => 'ana_lopez',
-            'avatar' => null,
-            'banner' => null,
-            'bio' => 'Frontend Developer con experiencia en Vue.js y React',
-            'user_id' => $user1->id,
-        ]);
+            foreach($posts as $post) {
+                $this->attachMedia($post);
+            }
+        });
 
-        $user2 = User::create([
-            'name' => 'Carlos Sánchez',
-            'email' => 'carlos@example.com',
-            'password' => Hash::make('password123'),
-        ]);
+    }
 
-        UserProfile::create([
-            'name' => 'Carlos Sánchez',
-            'username' => 'carlos_s',
-            'avatar' => null,
-            'banner' => null,
-            'bio' => 'Desarrollador Full Stack, especializado en Laravel y Node.js',
-            'user_id' => $user2->id,
-        ]);
+    function attachMedia(Post $post) {
+        $media_urls = [];
 
-        $user3 = User::create([
-            'name' => 'Lucía García',
-            'email' => 'lucia@example.com',
-            'password' => Hash::make('password321'),
-        ]);
+        for ($i=1; $i < 49; $i++) {
+            if ($i < 47) {
+                $media_urls[] = "/images/media/img_example_" . str_pad($i, 2, "0", STR_PAD_LEFT) . ".webp" ;
+            }
+            
+            if ($i > 46) {
+                $media_urls[] = "/images/media/img_example_" . str_pad($i, 2, "0", STR_PAD_LEFT) . ".gif" ;
+            }
+        }
 
-        UserProfile::create([
-            'name' => 'Lucía García',
-            'username' => 'luciag',
-            'avatar' => null,
-            'banner' => null,
-            'bio' => 'Diseñadora UX/UI y desarrolladora web en constante aprendizaje',
-            'user_id' => $user3->id,
-        ]);
+        for ($i=1; $i < 5; $i++) {
+            $media_urls[] = "/images/media/video_example_" . str_pad($i, 2, "0", STR_PAD_LEFT) . ".webm" ;
+        }
+
+        $num_of_media = rand(0, 4);
+
+        for ($i = 0; $i < $num_of_media; $i++) {
+            $randIdx = array_rand($media_urls);
+            $url = $media_urls[$randIdx];
+            $imgType = $randIdx > 46 ? 'gif' : 'webp';
+            
+            $mimeType = str_contains($url, 'video') ? 'video/webm' : "image/$imgType";
+
+            Media::create([
+                'url' => $url,
+                'mimeType' => $mimeType,
+                'order' => $i,
+                'post_id' => $post->id
+            ]);
+        }
     }
 }

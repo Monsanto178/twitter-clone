@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class ProfileService
 {
-    private int $perPage = 2;
+    private int $perPage = 6;
 
     public function setPostPerPage(int $value) {
         $this->perPage = $value;

@@ -37,7 +37,7 @@ export const MediaModal = ({mediaData, current=0, setOpenModal}: Props) => {
         }
         if(media.mimeType.startsWith('image/')) {
             return (
-                <img src={media.url} alt="media_content" className={`w-full h-auto object-contain transition-all duration-300 ease-in-out`} style={{translate: `${-100 * currentMedia}%`}}/>
+                <img src={media.url} alt="media_content" className={`w-full h-screen object-contain transition-all duration-300 ease-in-out`} style={{translate: `${-100 * currentMedia}%`}}/>
             )
         }
     }
@@ -67,9 +67,12 @@ export const MediaModal = ({mediaData, current=0, setOpenModal}: Props) => {
                 <div className="relative flex overflow-hidden rounded-[20px] max-w-[600px] max-h-screen h-auto bg-black md:bg-transparent">
                     {mediaData.map((el, idx) => {
                         return (
-                            <React.Fragment key={idx}>
+                            // <React.Fragment key={idx}>
+                            //     {classifyMedia(el)}
+                            // </React.Fragment>
+                            <div className="min-w-full h-screen flex justify-center items-center bg-black" key={idx}>
                                 {classifyMedia(el)}
-                            </React.Fragment>
+                            </div>
                         )
                     })}
                 </div>

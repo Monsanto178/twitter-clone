@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { BackBar, Post, Spinner } from "@/Components";
+import { BackBar, Post, ShowMoreBtn, Spinner } from "@/Components";
 import { PostType } from "@/Types";
 import { fetchData } from "@/Utils";
 import { useErrorContext } from "@/Context/ErrorContext";
@@ -19,8 +19,11 @@ interface Props {
 }
 
 export default function BookmarkPage({profileId}:Props) {
-    const [paginatedPosts, setPaginatedPosts] = useState<PaginatedPosts | null>(null);
+    const [posts, setPosts] = useState<PostType[] | null>(null);
+    const [paginated, setPaginated] = useState<PaginatedStats | null>(null);
     const [postsLoading, setPostLoading] = useState<boolean>(true);
+    const [loadMorePosts, setLoadMorePosts] = useState(false);
+
     const {setErrorState} = useErrorContext();
 
     const createFormData = (profileId:string, page:number | null = null) => {
@@ -34,34 +37,38 @@ export default function BookmarkPage({profileId}:Props) {
     }
 
     async function fetchBookmark() {
-        const page = paginatedPosts ? paginatedPosts.stats.current_page + 1 : null
+        const page = paginated ? paginated.current_page + 1 : null
         const formData = createFormData(profileId, page);
 
         try {
-            if(paginatedPosts) setPostLoading(true);
+            if(posts) setLoadMorePosts(true);
             const data = await fetchData<PaginatedPosts>('/api/bookmarks/getBookmarks', 'POST', formData);
             
-            if(paginatedPosts) {
-                const sumArray = paginatedPosts.posts.concat(data.posts);
+            if(posts) {
+                const sumArray = posts.concat(data.posts);
                 const bookmarks:PaginatedPosts = {
                     posts: sumArray,
                     stats: data.stats
                 }
-                setPaginatedPosts(bookmarks);
+                setPosts(bookmarks.posts);
+                setPaginated(bookmarks.stats)
                 return;
             }
 
-            setPaginatedPosts(data);
+            setPosts(data.posts);
+            setPaginated(data.stats);
+            setPostLoading(false);
         } catch (e) {
             console.error(e);
             setErrorState('Cannot load bookmarks. Please try again later');
         } finally {
             setPostLoading(false);
+            setLoadMorePosts(false);
         }
     }
 
     useEffect(() => {
-        if(paginatedPosts) return;
+        if(posts) return;
         
         fetchBookmark();
     }, [])
@@ -73,8 +80,8 @@ export default function BookmarkPage({profileId}:Props) {
         <section className="flex flex-col px-4 gap-y-4">
             <BackBar text="Bookmarks"/>
 
-            {paginatedPosts?.posts && !postsLoading && 
-                paginatedPosts.posts.map((post, idx) => {
+            {posts && !postsLoading && 
+                posts.map((post, idx) => {
                     return (
                     <React.Fragment key={idx}>
                         <Post post={post} selected={false} />
@@ -82,10 +89,13 @@ export default function BookmarkPage({profileId}:Props) {
                     )
                 })
             }
-            {postsLoading && !paginatedPosts && 
+            {postsLoading && !posts && 
              <Spinner width="48" height="48"/>
             }
-            {!postsLoading && paginatedPosts && paginatedPosts?.posts.length < 1 && 
+            {posts && !postsLoading && paginated?.current_page && paginated?.current_page !== paginated?.last_page && 
+                <ShowMoreBtn fetchAction={fetchBookmark} page={(paginated.current_page+1).toString()} loadFlag={loadMorePosts}/>
+            }
+            {!postsLoading && posts && posts.length < 1 && 
                 <div className="flex flex-col justify-center items-center gap-y-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 26 26">
                         <g fill="#fff">

@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
+use function Symfony\Component\Clock\now;
+
 class PostService
 {
     public function __construct()
@@ -298,7 +300,7 @@ class PostService
                 return $this->handleResponse('Repost removed', 200);
             }
 
-            $profile->reposts()->attach($post);
+            $profile->reposts()->attach($post, ['created_at' => now()]);
 
             return $this->handleResponse('Successfully reposted', 200);
         } catch (ValidationException $e) {

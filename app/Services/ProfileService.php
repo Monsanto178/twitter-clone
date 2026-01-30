@@ -182,7 +182,8 @@ class ProfileService
                     'replies as replies', 
                     'repostedBy as reposts')
                 ->where('user_profile_id', $profile->id)
-                ->addSelect(DB::raw("'post' as 'type'"));
+                ->addSelect(DB::raw("'post' as 'type'"))
+                ->addSelect(DB::raw("NULL as `reposted_at`"));;
 
             $reposted = Post::with(['userProfile', 'media'])
                 ->withCount([
@@ -190,9 +191,12 @@ class ProfileService
                     'replies as replies',
                     'repostedBy as reposts'
                 ])
-                ->whereIn('id', $profile->reposts()->pluck('post_id'))
-                ->addSelect(DB::raw("'repost' as 'type'"));
-        
+                ->join('reposts', 'posts.id', '=', 'reposts.post_id')
+                ->where('reposts.user_profile_id', $profile->id)
+                ->addSelect(DB::raw("'repost' as `type`"))
+                ->addSelect('reposts.created_at as `reposted_at`')
+                ->orderBy('reposts.created_at', 'desc');
+
             $quoted = Post::with(['userProfile', 'media'])
                 ->withCount([
                     'likedBy as likes',
@@ -200,12 +204,18 @@ class ProfileService
                     'repostedBy as reposts'
                 ])
                 ->whereIn('id', $profile->posts()->pluck('original_post_id'))
-                ->addSelect(DB::raw("'quote' as 'type'"));
+                ->addSelect(DB::raw("'quote' as 'type'"))
+                ->addSelect(DB::raw("NULL as `reposted_at`"));
         
             $unionPosts = $posted
                 ->union($reposted)
                 ->union($quoted)
-                ->orderBy('created_at', 'desc')
+                ->orderByDesc(DB::raw('
+                CASE
+                    WHEN `type` = "repost" THEN `reposted_at`
+                    ELSE `created_at`
+                END
+                '))
                 ->paginate($this->perPage);
 
             $this->addAttributes($unionPosts);
@@ -357,6 +367,7 @@ class ProfileService
                 'likedBy as likes', 
                 'replies as replies', 
                 'repostedBy as reposts')
+            ->latest()
             ->paginate($this->perPage);
 
             $this->addAttributes($bookmarks);

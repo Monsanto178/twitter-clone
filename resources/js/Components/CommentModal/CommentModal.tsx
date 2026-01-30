@@ -47,7 +47,8 @@ export const CommentModal = ({target = null, replying = false, setIsMcommentOpen
                 }} 
                 className="w-screen h-screen fixed inset-0 flex justify-center items-center">
                 <div className="fixed inset-0 bg-black opacity-85 w-screen h-screen"></div>
-                <div onClick={(e) => e.stopPropagation()} className="fixed bg-[#09122C] w-[95%] sm:w-[80%] max-w-[40rem] rounded-[20px]">
+                <div onClick={(e) => e.stopPropagation()} 
+                    className="fixed max-h-full bg-[#09122C] w-[95%] sm:w-[80%] max-w-[40rem] rounded-[20px]">
                     {<CommentBox
                         cover_img={profilePic ? profilePic : defaultAvatar}
                         replying={replying} 

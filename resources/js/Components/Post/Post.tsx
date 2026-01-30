@@ -172,7 +172,6 @@ export const Post = ({post, selected = false, showReply = false}:Props) => {
 
     function redirect() {
         if(selected) return;
-        // window.location.href = `/post/${post.id}`;
         const route = `/post/${post.id}`;
         router.get(route);
     }
@@ -210,7 +209,8 @@ export const Post = ({post, selected = false, showReply = false}:Props) => {
                 ${selected 
                     ? 'px-1 flex-col'
                     : 'cursor-pointer hover:bg-[#81818124] px-4'} 
-                py-2 transition-all duration-300 ease-in-out text-[15px] md:text-[16px]`
+                py-4 transition-all duration-300 ease-in-out text-[15px] md:text-[16px]
+                ${showReply ? '' : 'border-b border-gray-400'}`
             }>
             {post.type &&
             <div className="absolute top-0 left-4.5">

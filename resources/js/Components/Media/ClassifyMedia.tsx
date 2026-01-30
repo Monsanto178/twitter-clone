@@ -28,7 +28,7 @@ export const ClassifyMedia = ({media, actions}: Props):ReactNode => {
                     controls={false} 
                     className="w-full h-full object-cover cursor-pointer">
                 </video>
-                <div className="absolute inset-0 bg-black opacity-50 w-screen h-screen z-11"></div>
+                <div className="absolute inset-0 bg-black opacity-50 w-full h-full z-11"></div>
                 <svg xmlns="http://www.w3.org/2000/svg" 
                     width="56" 
                     height="56" 

@@ -41,7 +41,7 @@ export default function Login() {
     <section className="flex flex-col justify-center items-center">
         <article className="flex flex-col gap-y-15 justify-center items-center">
             <div className="flex flex-col items-center gap-y-5">
-                <strong>Welcome to Whitter</strong>
+                <strong>Welcome</strong>
                 <span>Please select your account</span>
             </div>
             

@@ -35,7 +35,7 @@ export const DisplayMedia = ({mediaArr, replying, type='View', deleteFile=() => 
                     <picture key={idx} className={`relative overflow-hidden bg-black w-[49%] ${mediaArr.length === 2 ? 'h-[25rem] max-h-full' : 'h-[12.5rem] max-h-1/2 sm:max-h-full'} flex items-center gap-1`}>
                         {setClassify(el, idx)}
                         {type === 'Edit' &&
-                            <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-99">
+                            <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-40">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                             </button>
                         }
@@ -52,11 +52,11 @@ export const DisplayMedia = ({mediaArr, replying, type='View', deleteFile=() => 
     } else {
         return(
             <>
-            <div className={`flex items-center bg-black overflow-hidden ${mediaArr.length === 3 ? 'w-[60%] h-full' : replying ? 'w-full h-[27rem]' : 'w-full h-full'}`}>
+            <div className={`flex items-center bg-black overflow-hidden ${mediaArr.length === 3 ? 'w-[49%] sm:w-[60%] h-full' : replying ? 'w-full h-[27rem]' : 'w-full h-full'}`}>
                 <picture className="relative w-full h-full">
                      {setClassify(mediaArr[0], 0)}
                     {type === 'Edit' &&
-                        <button onClick={() => {deleteFile(0)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
+                        <button onClick={() => {deleteFile(0)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-40">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                         </button>
                     }
@@ -68,14 +68,14 @@ export const DisplayMedia = ({mediaArr, replying, type='View', deleteFile=() => 
                 </picture>
             </div>
             {mediaArr.length>1 &&
-                <div className="flex flex-col w-[39%] h-full justify-between gap-1">
+                <div className="flex flex-col w-[49%] sm:w-[39%] h-full justify-start gap-1">
                 {mediaArr.map((el, idx) => {
                     if (idx !== 0) {
                         return (
-                            <picture key={idx} className={`relative overflow-hidden bg-black h-[12.5rem] flex items-center gap-1`}>
+                            <picture key={idx} className={`relative overflow-hidden bg-black h-full flex items-center gap-1`}>
                                 {setClassify(el, idx)}
                                 {type === 'Edit' &&
-                                    <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer">
+                                    <button onClick={() => {deleteFile(idx)}} className="absolute bg-[#000000bd] p-2 top-[0.25rem] right-[0.25rem] rounded-[50%] transition-all duration-300 ease-in-out hover:scale-110 hover:bg-black cursor-pointer z-40">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                     </button> 
                                 }

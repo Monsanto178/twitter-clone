@@ -23,10 +23,6 @@ type Stats = {
     total: number,
     last_page: number
 }
-// type PaginatedPosts = {
-//     posts: Array<PostType>,
-//     stats: PaginatedStats
-// }
 
 export default function Home() {
     const [profilePic, setProfilePic] = useState<string | null>(null);
@@ -84,20 +80,6 @@ export default function Home() {
         }
     }
 
-    // async function fetchParentPost(parentId: number):Promise<PostType | null> {
-    //     const formData = new FormData();
-    //     formData.append('id', parentId.toString());
-
-    //     try {
-    //         const response = await fetchData<PostType>('/api/getParent', 'POST', formData);
-            
-    //         return response;
-    //     } catch (e) {
-    //         console.error(e);
-    //         return null;
-    //     }
-    // }
-
     useEffect(() => {
         if(profilePic) return;
 
@@ -111,7 +93,9 @@ export default function Home() {
     }, [])
     return (
         <>
-            <CommentBox cover_img={profilePic ? profilePic : defaultAvatar}/>
+            <section className="border-b border-gray-400 w-full h-fit">
+                <CommentBox cover_img={profilePic ? profilePic : defaultAvatar}/>
+            </section>
             <section className="flex flex-col">
                 {loading && 
                     <Spinner width="48" height="48"/>

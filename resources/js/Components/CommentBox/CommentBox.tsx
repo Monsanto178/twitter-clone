@@ -239,13 +239,13 @@ export const CommentBox = ({modalOpen, cover_img, replying=false, replyTo=null}:
 
     return (
         <>
-        <div className={`flex w-full gap-2 p-4 ${replying ? 'z-99' : ''}`}>
+        <div className={`flex w-full gap-2 p-4 ${replying ? 'z-99' : ''}`} style={{'maxHeight':'85dvh'}}>
             <picture className="w-[50px] h-[50px] rounded-[50%] overflow-hidden group shrink-0">
                 <img src={cover_img ? cover_img : defaultAvatar} alt="cover_img" className="w-full h-full" draggable={false}/>
             </picture>
 
             <div className="flex flex-col w-full">
-                <div className="w-full text-[18px]">
+                <div className="w-full text-[18px] max-h-full overflow-hidden">
                     {replying && 
                         <div className="text-[16px] pb-2 flex gap-x-2">
                             <span className="opacity-50">Replying to:</span>
@@ -266,7 +266,7 @@ export const CommentBox = ({modalOpen, cover_img, replying=false, replyTo=null}:
                         id="files" accept="video/*,image/*" multiple/>
                     
                     {urlPreview && 
-                        <div className={`overflow-hidden rounded-[20px] justify-between items-stretch gap-1 flex flex-wrap`}>
+                        <div className={`h-full max-h-[89%] overflow-hidden rounded-[20px] justify-between items-stretch gap-1 flex flex-wrap`}>
                             <DisplayMedia mediaArr={urlPreview} 
                                 deleteFile={deleteFile}
                                 handleClick={handleEditFile} 
